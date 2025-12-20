@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"os"
@@ -23,7 +24,25 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-
-		conn.Write([]byte("+PONG\r\n"))
+		go handleConnection(conn)
 	}
+}
+
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+
+	for {
+		_, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Client disconnected:", err)
+			return
+		}
+
+		// Send response
+		response := "+PONG\r\n"
+		conn.Write([]byte(response))
+	}
+
 }
