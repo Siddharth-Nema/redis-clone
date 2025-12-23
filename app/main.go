@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 var _ = net.Listen
@@ -18,12 +19,14 @@ func main() {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
 	}
-	conn, err := l.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection: ", err.Error())
+			os.Exit(1)
+		}
+		go handleConnection(conn)
 	}
-	handleConnection(conn)
 }
 
 func handleConnection(conn net.Conn) {
@@ -32,15 +35,17 @@ func handleConnection(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	for {
-		_, err := reader.ReadString('\n')
+		line, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Println("Client disconnected:", err)
 			return
 		}
 
-		// Send response
-		response := "+PONG\r\n"
-		conn.Write([]byte(response))
+		command := strings.TrimSpace(line)
+		if command == "PING" {
+			response := "+PONG\r\n"
+			conn.Write([]byte(response))
+		}
 	}
 
 }
