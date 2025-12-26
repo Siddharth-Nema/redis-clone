@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strconv"
 )
 
 var _ = net.Listen
@@ -53,10 +52,26 @@ func handleConnection(conn net.Conn) {
 
 			case "ECHO":
 				if len(tokens) > 1 {
-					args := tokens[1]
-					response = "$" + strconv.Itoa(len(args)) + "\r\n" + args + "\r\n"
+					arg := tokens[1]
+					response = convertToRESP(arg)
+				}
+
+			case "SET":
+				if len(tokens) > 2 {
+					set(tokens[1], tokens[2])
+					response = OK
+				}
+			case "GET":
+				if len(tokens) > 1 {
+					val, ok := get(tokens[1])
+					if ok {
+						response = convertToRESP(val)
+					} else {
+						response = ERR
+					}
 				}
 			}
+
 			conn.Write([]byte(response))
 		}
 	}

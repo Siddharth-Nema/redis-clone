@@ -7,6 +7,17 @@ import (
 	"strings"
 )
 
+var OK = "+OK\r\n"
+var ERR = "$-1\r\n"
+
+func convertToRESP(arg string) string {
+	var response = "$"
+	response += strconv.Itoa(len(arg)) + "\r\n"
+	response += arg + "\r\n"
+
+	return response
+}
+
 // parseRESP reads and parses a complete RESP array command
 func parseRESP(reader *bufio.Reader) ([]string, error) {
 	// Read first byte to determine type
