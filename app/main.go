@@ -57,19 +57,9 @@ func handleConnection(conn net.Conn) {
 				}
 
 			case "SET":
-				if len(tokens) > 2 {
-					set(tokens[1], tokens[2])
-					response = OK
-				}
+				response = handleSet(tokens)
 			case "GET":
-				if len(tokens) > 1 {
-					val, ok := get(tokens[1])
-					if ok {
-						response = convertToRESP(val)
-					} else {
-						response = ERR
-					}
-				}
+				response = handleGet(tokens)
 			}
 
 			conn.Write([]byte(response))
