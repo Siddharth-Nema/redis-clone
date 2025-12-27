@@ -80,3 +80,21 @@ func handleRPUSH(tokens []string) string {
 
 	return convertToRESPInt(count)
 }
+
+func handleLRANGE(tokens []string) string {
+	if len(tokens) < 4 {
+		return ERR
+	}
+
+	start, err := strconv.Atoi(tokens[2])
+	if err != nil {
+		return ERR
+	}
+	end, err := strconv.Atoi(tokens[3])
+	if err != nil {
+		return ERR
+	}
+
+	reqList := getItemsFromList(tokens[1], start, end)
+	return convertToRESPArray(reqList)
+}

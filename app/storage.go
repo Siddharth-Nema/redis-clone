@@ -82,3 +82,17 @@ func pushToList(key string, vals []string) int {
 	}
 	return len(listStore[key])
 }
+
+func getItemsFromList(key string, start int, end int) []string {
+	listStoreMtx.Lock()
+	defer listStoreMtx.Unlock()
+
+	reqList := listStore[key]
+	if start > end || start > len(reqList) {
+		return []string{}
+	}
+
+	end = min(end, len(reqList)-1)
+
+	return reqList[start : end+1]
+}

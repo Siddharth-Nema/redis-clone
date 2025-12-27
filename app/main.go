@@ -39,10 +39,6 @@ func handleConnection(conn net.Conn) {
 			return
 		}
 
-		// for idx, token := range tokens {
-		// 	fmt.Printf("%d %s\n", idx, token)
-		// }
-
 		if len(tokens) > 0 {
 			command := tokens[0]
 			var response string
@@ -61,7 +57,9 @@ func handleConnection(conn net.Conn) {
 			case "GET":
 				response = handleGet(tokens)
 			case "RPUSH":
-				response = handleRPUSH(tokens)	
+				response = handleRPUSH(tokens)
+			case "LRANGE":
+				response = handleLRANGE(tokens)
 			}
 
 			conn.Write([]byte(response))

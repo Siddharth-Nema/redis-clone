@@ -9,18 +9,28 @@ import (
 
 var OK = "+OK\r\n"
 var ERR = "$-1\r\n"
+var CRLF = "\r\n"
 
 func convertToRESPString(arg string) string {
 	var response = "$"
-	response += strconv.Itoa(len(arg)) + "\r\n"
-	response += arg + "\r\n"
+	response += strconv.Itoa(len(arg)) + CRLF
+	response += arg + CRLF
 
 	return response
 }
 
 func convertToRESPInt(arg int) string {
 	var response = ":"
-	response += strconv.Itoa(arg) + "\r\n"
+	response += strconv.Itoa(arg) + CRLF
+
+	return response
+}
+
+func convertToRESPArray(args []string) string {
+	var response = "*" + strconv.Itoa(len(args)) + CRLF
+	for _, arg := range args {
+		response += "$" + strconv.Itoa(len(arg)) + CRLF + arg + CRLF
+	}
 
 	return response
 }
