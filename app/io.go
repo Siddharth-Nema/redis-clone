@@ -10,10 +10,17 @@ import (
 var OK = "+OK\r\n"
 var ERR = "$-1\r\n"
 
-func convertToRESP(arg string) string {
+func convertToRESPString(arg string) string {
 	var response = "$"
 	response += strconv.Itoa(len(arg)) + "\r\n"
 	response += arg + "\r\n"
+
+	return response
+}
+
+func convertToRESPInt(arg int) string {
+	var response = ":"
+	response += strconv.Itoa(arg) + "\r\n"
 
 	return response
 }

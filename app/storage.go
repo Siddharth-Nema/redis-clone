@@ -12,6 +12,11 @@ var (
 )
 
 var (
+	listStore    = make(map[string][]string)
+	listStoreMtx sync.RWMutex
+)
+
+var (
 	expiry    = make(map[string]time.Time)
 	expiryMtx sync.RWMutex
 )
@@ -66,4 +71,13 @@ func deleteKey(key string) error {
 	delete(expiry, key)
 
 	return nil
+}
+
+func pushToList(key string, val string) int {
+	listStoreMtx.Lock()
+	defer listStoreMtx.Unlock()
+
+	listStore[key] = append(listStore[key], val)
+
+	return len(listStore[key])
 }

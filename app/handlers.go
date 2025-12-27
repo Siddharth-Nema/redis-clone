@@ -57,7 +57,7 @@ func handleGet(tokens []string) string {
 		isExpired = time.Now().After(exp)
 	}
 	if exists && !isExpired {
-		response = convertToRESP(val)
+		response = convertToRESPString(val)
 	} else {
 		response = ERR
 		if isExpired {
@@ -66,4 +66,17 @@ func handleGet(tokens []string) string {
 	}
 
 	return response
+}
+
+func handleRPUSH(tokens []string) string {
+	if len(tokens) < 3 {
+		return ERR
+	}
+
+	key := tokens[1]
+	val := tokens[2]
+
+	count := pushToList(key, val)
+
+	return convertToRESPInt(count)
 }

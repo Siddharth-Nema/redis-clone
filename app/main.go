@@ -53,13 +53,15 @@ func handleConnection(conn net.Conn) {
 			case "ECHO":
 				if len(tokens) > 1 {
 					arg := tokens[1]
-					response = convertToRESP(arg)
+					response = convertToRESPString(arg)
 				}
 
 			case "SET":
 				response = handleSet(tokens)
 			case "GET":
 				response = handleGet(tokens)
+			case "RPUSH":
+				response = handleRPUSH(tokens)
 			}
 
 			conn.Write([]byte(response))
