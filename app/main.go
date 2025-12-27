@@ -61,7 +61,7 @@ func handleConnection(conn net.Conn) {
 			case "GET":
 				response = handleGet(tokens)
 			case "RPUSH":
-				response = handleRPUSH(tokens)
+				response = handleRPUSH(tokens)	
 			}
 
 			conn.Write([]byte(response))

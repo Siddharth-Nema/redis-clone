@@ -74,7 +74,7 @@ func handleRPUSH(tokens []string) string {
 	}
 
 	key := tokens[1]
-	val := tokens[2]
+	val := tokens[2:]
 
 	count := pushToList(key, val)
 

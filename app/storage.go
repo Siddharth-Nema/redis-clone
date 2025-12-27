@@ -73,11 +73,12 @@ func deleteKey(key string) error {
 	return nil
 }
 
-func pushToList(key string, val string) int {
+func pushToList(key string, vals []string) int {
 	listStoreMtx.Lock()
 	defer listStoreMtx.Unlock()
 
-	listStore[key] = append(listStore[key], val)
-
+	for _, val := range vals {
+		listStore[key] = append(listStore[key], val)
+	}
 	return len(listStore[key])
 }
