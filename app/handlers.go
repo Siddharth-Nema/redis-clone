@@ -128,10 +128,23 @@ func handleLPOP(tokens []string) string {
 		return ERR
 	}
 
-	val, ok := popFromLeftofArray(tokens[1])
+	var count = 1
+	if len(tokens) > 2 {
+		var err error
+		count, err = strconv.Atoi(tokens[2])
+		if err != nil {
+			count = 1
+		}
+	}
+
+	val, ok := popFromLeftofArray(tokens[1], count)
 
 	if ok {
-		return convertToRESPString(val)
+		if count == 1 {
+			return convertToRESPString(val[0])
+		} else {
+			return convertToRESPArray(val)
+		}
 	} else {
 		return ERR
 	}
