@@ -88,11 +88,20 @@ func getItemsFromList(key string, start int, end int) []string {
 	defer listStoreMtx.Unlock()
 
 	reqList := listStore[key]
+	size := len(reqList)
+	if start < 0 {
+		start += size
+	}
+	if end < 0 {
+		end += size
+	}
+
+	start = max(start, 0)
+	end = min(end, size-1)
+
 	if start > end || start > len(reqList) {
 		return []string{}
 	}
-
-	end = min(end, len(reqList)-1)
 
 	return reqList[start : end+1]
 }
