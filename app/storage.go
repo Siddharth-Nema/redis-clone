@@ -119,3 +119,16 @@ func getLength(key string) int {
 
 	return len(listStore[key])
 }
+
+func popFromLeftofArray(key string) (string, bool) {
+	listStoreMtx.Lock()
+	defer listStoreMtx.Unlock()
+
+	if len(listStore[key]) > 1 {
+		val := listStore[key][0]
+		listStore[key] = listStore[key][1:]
+		return val, true
+	} else {
+		return "nil", false
+	}
+}

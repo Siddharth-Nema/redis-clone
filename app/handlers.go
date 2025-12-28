@@ -122,3 +122,17 @@ func handleLLEN(tokens []string) string {
 
 	return convertToRESPInt(size)
 }
+
+func handleLPOP(tokens []string) string {
+	if len(tokens) < 2 {
+		return ERR
+	}
+
+	val, ok := popFromLeftofArray(tokens[1])
+
+	if ok {
+		return convertToRESPString(val)
+	} else {
+		return ERR
+	}
+}
