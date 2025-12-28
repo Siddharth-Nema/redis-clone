@@ -77,9 +77,16 @@ func pushToList(key string, vals []string) int {
 	listStoreMtx.Lock()
 	defer listStoreMtx.Unlock()
 
-	for _, val := range vals {
-		listStore[key] = append(listStore[key], val)
-	}
+	listStore[key] = append(listStore[key], vals...)
+	return len(listStore[key])
+}
+
+func prependToList(key string, vals []string) int {
+	listStoreMtx.Lock()
+	defer listStoreMtx.Unlock()
+
+	listStore[key] = append(vals, listStore[key]...)
+
 	return len(listStore[key])
 }
 

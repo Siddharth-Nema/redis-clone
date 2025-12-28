@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -77,6 +78,19 @@ func handleRPUSH(tokens []string) string {
 	val := tokens[2:]
 
 	count := pushToList(key, val)
+
+	return convertToRESPInt(count)
+}
+
+func handleLPUSH(tokens []string) string {
+	if len(tokens) < 3 {
+		return ERR
+	}
+
+	key := tokens[1]
+	val := tokens[2:]
+	slices.Reverse(val)
+	count := prependToList(key, val)
 
 	return convertToRESPInt(count)
 }

@@ -58,6 +58,8 @@ func handleConnection(conn net.Conn) {
 				response = handleGet(tokens)
 			case "RPUSH":
 				response = handleRPUSH(tokens)
+			case "LPUSH":
+				response = handleLPUSH(tokens)
 			case "LRANGE":
 				response = handleLRANGE(tokens)
 			}
