@@ -112,3 +112,10 @@ func getItemsFromList(key string, start int, end int) []string {
 
 	return reqList[start : end+1]
 }
+
+func getLength(key string) int {
+	listStoreMtx.Lock()
+	defer listStoreMtx.Unlock()
+
+	return len(listStore[key])
+}

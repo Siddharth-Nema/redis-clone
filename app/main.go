@@ -62,6 +62,8 @@ func handleConnection(conn net.Conn) {
 				response = handleLPUSH(tokens)
 			case "LRANGE":
 				response = handleLRANGE(tokens)
+			case "LLEN":
+				response = handleLLEN(tokens)
 			}
 
 			conn.Write([]byte(response))

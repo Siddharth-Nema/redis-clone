@@ -112,3 +112,13 @@ func handleLRANGE(tokens []string) string {
 	reqList := getItemsFromList(tokens[1], start, end)
 	return convertToRESPArray(reqList)
 }
+
+func handleLLEN(tokens []string) string {
+	if len(tokens) < 2 {
+		return ERR
+	}
+
+	size := getLength(tokens[1])
+
+	return convertToRESPInt(size)
+}
