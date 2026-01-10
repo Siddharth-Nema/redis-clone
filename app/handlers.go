@@ -155,13 +155,21 @@ func handleBLPOP(tokens []string) string {
 		return ERR
 	}
 
-	val, ok := blockingLPop(tokens[1], 0)
+	timeout := 0.0
+	if len(tokens) >= 3 {
+		parsedTime, err := strconv.ParseFloat(tokens[2], 64)
+		if err == nil {
+			timeout = parsedTime
+		}
+	}
+
+	val, ok := blockingLPop(tokens[1], timeout)
 	res := make([]string, 2)
 	res[0] = tokens[1]
 	res[1] = val
 	if ok {
 		return convertToRESPArray(res)
 	} else {
-		return ERR
+		return NULL_ARRAY
 	}
 }

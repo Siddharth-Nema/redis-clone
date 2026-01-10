@@ -111,6 +111,8 @@ func pushToList(key string, vals []string) int {
 	sem := listSemaphores[key]
 	wq := waiters[key]
 
+	newLen := len(vals) + len(listStore[key])
+
 	i := 0
 	for i < len(vals) && wq.Len() > 0 {
 		e := wq.Front()
@@ -126,7 +128,7 @@ func pushToList(key string, vals []string) int {
 		sem.ReleaseN(len(vals) - i)
 	}
 
-	return len(listStore[key])
+	return newLen
 }
 
 func prependToList(key string, vals []string) int {
@@ -183,29 +185,42 @@ func getItemsFromList(key string, start int, end int) []string {
 	return reqList[start : end+1]
 }
 
-func blockingLPop(key string, timeoutSecs int) (string, bool) {
-	// ensure structures exist for the key
+func blockingLPop(key string, timeoutSecs float64) (string, bool) {
 	createIfDoesNotExist(key)
-
-	// If timeoutSecs <= 0, wait forever; otherwise wait with timeout
-	if timeoutSecs <= 0 {
-		listSemaphores[key].Acquire()
-	} else {
-		timeout := time.Duration(timeoutSecs) * time.Second
-		ok := listSemaphores[key].AcquireTimeout(timeout)
-		if !ok {
-			return "", false
-		}
-	}
 
 	listMtx := getListMutex(key)
 	listMtx.Lock()
-	defer listMtx.Unlock()
 
-	// guaranteed by semaphore
-	val := listStore[key][0]
-	listStore[key] = listStore[key][1:]
-	return val, true
+	// If list has items, pop immediately
+	if len(listStore[key]) > 0 {
+		val := listStore[key][0]
+		listStore[key] = listStore[key][1:]
+		listMtx.Unlock()
+		return val, true
+	}
+
+	// List is empty - create waiter and add to queue
+	w := &waiter{ch: make(chan result, 1)}
+	elem := waiters[key].PushBack(w)
+	listMtx.Unlock()
+
+	// Wait for result on the channel
+	if timeoutSecs <= 0 {
+		res := <-w.ch
+		return res.val, res.ok
+	} else {
+		timeout := time.Duration(timeoutSecs * float64(time.Second))
+		select {
+		case res := <-w.ch:
+			return res.val, res.ok
+		case <-time.After(timeout):
+			// Timeout - remove waiter from queue
+			listMtx.Lock()
+			waiters[key].Remove(elem)
+			listMtx.Unlock()
+			return "", false
+		}
+	}
 }
 
 func getLength(key string) int {
