@@ -65,7 +65,9 @@ func handleConnection(conn net.Conn) {
 			case "LLEN":
 				response = handleLLEN(tokens)
 			case "LPOP":
-				response = handleLPOP(tokens)	
+				response = handleLPOP(tokens)
+			case "BLPOP":
+				response = handleBLPOP(tokens)
 			}
 
 			conn.Write([]byte(response))

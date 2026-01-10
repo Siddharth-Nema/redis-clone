@@ -149,3 +149,19 @@ func handleLPOP(tokens []string) string {
 		return ERR
 	}
 }
+
+func handleBLPOP(tokens []string) string {
+	if len(tokens) < 2 {
+		return ERR
+	}
+
+	val, ok := blockingLPop(tokens[1], 0)
+	res := make([]string, 2)
+	res[0] = tokens[1]
+	res[1] = val
+	if ok {
+		return convertToRESPArray(res)
+	} else {
+		return ERR
+	}
+}
