@@ -34,16 +34,22 @@ var (
 	keysMtx sync.RWMutex
 )
 
+// Streams
+var (
+	streamStore    = make(map[string]*Stream)
+	streamStoreMtx sync.RWMutex
+)
+
 func getType(key string) string {
-	keysMtx.Lock()
-	defer keysMtx.Unlock()
+	keysMtx.RLock()
+	defer keysMtx.RUnlock()
 	keyType, exists := keys[key]
 
 	if exists {
 		return keyType
-	} else {
-		return "none"
 	}
+
+	return "none"
 }
 
 func setType(key string, keyType string) {
@@ -115,7 +121,7 @@ func deleteKey(key string) error {
 	return nil
 }
 
-func createIfDoesNotExist(key string) {
+func createListIfDoesntExist(key string) {
 	listMutexesMtx.Lock()
 	defer listMutexesMtx.Unlock()
 
@@ -135,7 +141,7 @@ func pushToList(key string, vals []string) int {
 	mtx := getListMutex(key)
 	mtx.Lock()
 	defer mtx.Unlock()
-	createIfDoesNotExist(key)
+	createListIfDoesntExist(key)
 
 	sem := listSemaphores[key]
 	wq := waiters[key]
@@ -165,7 +171,7 @@ func prependToList(key string, vals []string) int {
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	createIfDoesNotExist(key)
+	createListIfDoesntExist(key)
 	sem := listSemaphores[key]
 	wq := waiters[key]
 
@@ -215,7 +221,7 @@ func getItemsFromList(key string, start int, end int) []string {
 }
 
 func blockingLPop(key string, timeoutSecs float64) (string, bool) {
-	createIfDoesNotExist(key)
+	createListIfDoesntExist(key)
 
 	listMtx := getListMutex(key)
 	listMtx.Lock()
@@ -272,4 +278,41 @@ func popFromLeftofArray(key string, count int) ([]string, bool) {
 	} else {
 		return []string{}, false
 	}
+}
+
+func createStream(key string) {
+	// create stream entry and set key type
+	streamStoreMtx.Lock()
+	defer streamStoreMtx.Unlock()
+
+	streamStore[key] = &Stream{
+		mtx:     &sync.RWMutex{},
+		entries: []StreamEntry{},
+	}
+
+	keysMtx.Lock()
+	keys[key] = "stream"
+	keysMtx.Unlock()
+}
+
+func addToStream(key string, entryID string, values map[string]string) {
+	streamStoreMtx.RLock()
+	streamPtr, exists := streamStore[key]
+	streamStoreMtx.RUnlock()
+
+	if !exists {
+		createStream(key)
+		streamStoreMtx.RLock()
+		streamPtr = streamStore[key]
+		streamStoreMtx.RUnlock()
+	}
+
+	streamPtr.mtx.Lock()
+	defer streamPtr.mtx.Unlock()
+
+	var newEntry StreamEntry
+	newEntry.ID = entryID
+	newEntry.Values = values
+
+	streamPtr.entries = append(streamPtr.entries, newEntry)
 }

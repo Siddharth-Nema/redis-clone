@@ -183,3 +183,23 @@ func handleTYPE(tokens []string) string {
 
 	return convertToSimpleString(val)
 }
+
+func handleXADD(tokens []string) string {
+	if len(tokens) < 3 {
+		return ERR
+	}
+
+	key := tokens[1]
+	entryID := tokens[2]
+	values := make(map[string]string)
+
+	for i := 4; i < len(tokens); i = i + 2 {
+		if len(tokens) >= i+2 {
+			values[tokens[i]] = tokens[i+1]
+		}
+	}
+
+	addToStream(key, entryID, values)
+
+	return convertToRESPString(entryID)
+}

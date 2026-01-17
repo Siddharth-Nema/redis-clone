@@ -70,6 +70,8 @@ func handleConnection(conn net.Conn) {
 				response = handleBLPOP(tokens)
 			case "TYPE":
 				response = handleTYPE(tokens)
+			case "XADD":
+				response = handleXADD(tokens)
 			}
 
 			conn.Write([]byte(response))
