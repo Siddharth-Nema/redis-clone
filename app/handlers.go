@@ -173,3 +173,13 @@ func handleBLPOP(tokens []string) string {
 		return NULL_ARRAY
 	}
 }
+
+func handleTYPE(tokens []string) string {
+	if len(tokens) < 2 {
+		return ERR
+	}
+
+	val := getType(tokens[1])
+
+	return convertToSimpleString(val)
+}

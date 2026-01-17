@@ -7,11 +7,19 @@ import (
 	"time"
 )
 
+// String Store
 var (
 	store    = make(map[string]string)
 	storeMtx sync.RWMutex
 )
 
+// String expiry store
+var (
+	expiry    = make(map[string]time.Time)
+	expiryMtx sync.RWMutex
+)
+
+// List Store
 var (
 	listStore      = make(map[string][]string)
 	listMutexes    = make(map[string]*sync.RWMutex)
@@ -20,15 +28,35 @@ var (
 	listMutexesMtx sync.Mutex
 )
 
+// All keys Store
 var (
-	expiry    = make(map[string]time.Time)
-	expiryMtx sync.RWMutex
+	keys    = make(map[string]string)
+	keysMtx sync.RWMutex
 )
+
+func getType(key string) string {
+	keysMtx.Lock()
+	defer keysMtx.Unlock()
+	keyType, exists := keys[key]
+
+	if exists {
+		return keyType
+	} else {
+		return "none"
+	}
+}
+
+func setType(key string, keyType string) {
+	keysMtx.Lock()
+	defer keysMtx.Unlock()
+	keys[key] = keyType
+}
 
 func set(key string, val string) {
 	storeMtx.Lock()
 	defer storeMtx.Unlock()
 	store[key] = val
+	setType(key, "string")
 }
 
 func get(key string) (string, bool) {
@@ -93,6 +121,7 @@ func createIfDoesNotExist(key string) {
 
 	if _, exists := listStore[key]; !exists {
 		listStore[key] = []string{}
+		setType(key, "list")
 	}
 	if _, exists := listSemaphores[key]; !exists {
 		listSemaphores[key] = NewSemaphore()

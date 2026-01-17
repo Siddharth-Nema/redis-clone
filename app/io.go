@@ -12,6 +12,10 @@ var ERR = "$-1\r\n"
 var CRLF = "\r\n"
 var NULL_ARRAY = "*-1\r\n"
 
+func convertToSimpleString(arg string) string {
+	return "+" + arg + "\r\n"
+}
+
 func convertToRESPString(arg string) string {
 	var response = "$"
 	response += strconv.Itoa(len(arg)) + CRLF
