@@ -295,7 +295,7 @@ func createStream(key string) {
 	keysMtx.Unlock()
 }
 
-func addToStream(key string, entryID string, values map[string]string) {
+func addToStream(key string, entryID string, values map[string]string) error {
 	streamStoreMtx.RLock()
 	streamPtr, exists := streamStore[key]
 	streamStoreMtx.RUnlock()
@@ -307,6 +307,12 @@ func addToStream(key string, entryID string, values map[string]string) {
 		streamStoreMtx.RUnlock()
 	}
 
+	err := validateEntryID(entryID, streamPtr)
+
+	if err != nil {
+		return err
+	}
+
 	streamPtr.mtx.Lock()
 	defer streamPtr.mtx.Unlock()
 
@@ -315,4 +321,5 @@ func addToStream(key string, entryID string, values map[string]string) {
 	newEntry.Values = values
 
 	streamPtr.entries = append(streamPtr.entries, newEntry)
+	return nil
 }

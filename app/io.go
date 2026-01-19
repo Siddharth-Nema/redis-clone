@@ -40,6 +40,10 @@ func convertToRESPArray(args []string) string {
 	return response
 }
 
+func convertToSimpleError(args string) string {
+	return "-ERR " + args + "\r\n"
+}
+
 // parseRESP reads and parses a complete RESP array command
 func parseRESP(reader *bufio.Reader) ([]string, error) {
 	// Read first byte to determine type
