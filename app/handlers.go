@@ -199,10 +199,10 @@ func handleXADD(tokens []string) string {
 		}
 	}
 
-	err := addToStream(key, entryID, values)
+	res, err := addToStream(key, entryID, values)
 	if err != nil {
 		return convertToSimpleError(err.Error())
 	}
 
-	return convertToRESPString(entryID)
+	return convertToRESPString(res)
 }

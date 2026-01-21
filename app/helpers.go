@@ -1,56 +1,78 @@
 package main
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 )
 
-func validateEntryID(entryID string, streamPtr *Stream) error {
-	entryIDParts := strings.SplitN(entryID, "-", 2)
-	if len(entryIDParts) != 2 {
-		return errors.New("The ID specified in XADD is invalid")
+func generateStreamIDFromString(s string, stream *Stream) (StreamID, error) {
+	parts := strings.SplitN(s, "-", 2)
+	if len(parts) != 2 {
+		return StreamID{}, ErrInvalidID
 	}
 
-	entryTime, err := strconv.ParseInt(entryIDParts[0], 10, 64)
+	t, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
-		return errors.New("The ID specified in XADD is invalid")
+		return StreamID{}, ErrInvalidID
+	}
+	var seq int64
+
+	if parts[1] == "*" {
+		var lastID StreamID
+		if len(stream.entries) == 0 {
+			if t == 0 {
+				seq = 1
+			} else {
+				seq = 0
+			}
+		} else {
+			lastID = stream.entries[len(stream.entries)-1].ID
+			if lastID.Time == t {
+				seq = lastID.Seq + 1
+			} else {
+				seq = 0
+			}
+		}
+	} else {
+		seq, err = strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			return StreamID{}, ErrInvalidID
+		}
 	}
 
-	entrySeq, err := strconv.ParseInt(entryIDParts[1], 10, 64)
+	if t < 0 || seq < 0 || (t == 0 && seq == 0) {
+		return StreamID{}, ErrIDTooSmall
+	}
+
+	return StreamID{Time: t, Seq: seq}, nil
+}
+
+func streamIDToString(streamID StreamID) string {
+	return strconv.FormatInt(streamID.Time, 10) + "-" + strconv.FormatInt(streamID.Seq, 10)
+}
+
+func (a StreamID) GreaterThan(b StreamID) bool {
+	return a.Time > b.Time || (a.Time == b.Time && a.Seq > b.Seq)
+}
+
+func validateEntryID(entryID string, stream *Stream) error {
+	newID, err := generateStreamIDFromString(entryID, stream)
 	if err != nil {
-		return errors.New("The ID specified in XADD is invalid")
+		return err
 	}
 
-	if entryTime < 0 || entrySeq < 0 || (entryTime == 0 && entrySeq == 0) {
-		return errors.New("The ID specified in XADD must be greater than 0-0")
-	}
+	stream.mtx.RLock()
+	defer stream.mtx.RUnlock()
 
-	streamPtr.mtx.RLock()
-	if len(streamPtr.entries) == 0 {
-		streamPtr.mtx.RUnlock()
+	if len(stream.entries) == 0 {
 		return nil
 	}
-	lastEntryID := streamPtr.entries[len(streamPtr.entries)-1].ID
-	streamPtr.mtx.RUnlock()
 
-	lastEntryIDParts := strings.SplitN(lastEntryID, "-", 2)
-	if len(lastEntryIDParts) != 2 {
-		return errors.New("The ID specified in XADD is invalid")
+	lastID := stream.entries[len(stream.entries)-1].ID
+
+	if !newID.GreaterThan(lastID) {
+		return ErrIDNotIncreasing
 	}
 
-	lastTime, err := strconv.ParseInt(lastEntryIDParts[0], 10, 64)
-	if err != nil {
-		return errors.New("The ID specified in XADD is invalid")
-	}
-
-	lastSeq, err := strconv.ParseInt(lastEntryIDParts[1], 10, 64)
-	if err != nil {
-		return errors.New("The ID specified in XADD is invalid")
-	}
-
-	if entryTime > lastTime || (entryTime == lastTime && entrySeq > lastSeq) {
-		return nil
-	}
-	return errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
+	return nil
 }
