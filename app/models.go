@@ -14,10 +14,6 @@ type result struct {
 	ok  bool
 }
 
-type listState struct {
-	items []string
-}
-
 // Stream
 type StreamEntry struct {
 	ID     StreamID

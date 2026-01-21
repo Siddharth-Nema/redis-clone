@@ -3,9 +3,24 @@ package main
 import (
 	"strconv"
 	"strings"
+	"time"
 )
 
+func autoGenerateCompleteID() StreamID {
+	time := time.Now().UnixMilli()
+	var newID StreamID
+	newID.Time = time
+	newID.Seq = 0
+
+	return newID
+}
+
 func generateStreamIDFromString(s string, stream *Stream) (StreamID, error) {
+
+	if s == "*" {
+		return autoGenerateCompleteID(), nil
+	}
+
 	parts := strings.SplitN(s, "-", 2)
 	if len(parts) != 2 {
 		return StreamID{}, ErrInvalidID
