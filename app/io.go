@@ -40,6 +40,25 @@ func convertToRESPArray(args []string) string {
 	return response
 }
 
+func convertToRESPMultiArray(items [][]interface{}) string {
+	var response = "*" + strconv.Itoa(len(items)) + CRLF
+
+	for _, item := range items {
+		response += "*2" + CRLF
+
+		idStr := item[0].(string)
+		response += "$" + strconv.Itoa(len(idStr)) + CRLF + idStr + CRLF
+
+		vals := item[1].([]string)
+		response += "*" + strconv.Itoa(len(vals)) + CRLF
+		for _, v := range vals {
+			response += "$" + strconv.Itoa(len(v)) + CRLF + v + CRLF
+		}
+	}
+
+	return response
+}
+
 func convertToSimpleError(args string) string {
 	return "-ERR " + args + "\r\n"
 }

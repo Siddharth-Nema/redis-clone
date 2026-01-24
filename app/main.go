@@ -72,6 +72,8 @@ func handleConnection(conn net.Conn) {
 				response = handleTYPE(tokens)
 			case "XADD":
 				response = handleXADD(tokens)
+			case "XRANGE":
+				response = handleXRANGE(tokens)
 			}
 
 			conn.Write([]byte(response))

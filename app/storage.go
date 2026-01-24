@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
 
 // String Store
@@ -36,7 +38,7 @@ var (
 
 // Streams
 var (
-	streamStore    = make(map[string]*Stream)
+	streamStore    = make(map[string]*models.Stream)
 	streamStoreMtx sync.RWMutex
 )
 
@@ -151,10 +153,10 @@ func pushToList(key string, vals []string) int {
 	i := 0
 	for i < len(vals) && wq.Len() > 0 {
 		e := wq.Front()
-		w := e.Value.(*waiter)
+		w := e.Value.(*models.Waiter)
 		wq.Remove(e)
 
-		w.ch <- result{val: vals[i], ok: true}
+		w.Ch <- models.Result{Val: vals[i], Ok: true}
 		i++
 	}
 
@@ -178,10 +180,10 @@ func prependToList(key string, vals []string) int {
 	i := len(vals) - 1
 	for i >= 0 && wq.Len() > 0 {
 		e := wq.Front()
-		w := e.Value.(*waiter)
+		w := e.Value.(*models.Waiter)
 		wq.Remove(e)
 
-		w.ch <- result{val: vals[i], ok: true}
+		w.Ch <- models.Result{Val: vals[i], Ok: true}
 		i--
 	}
 
@@ -235,19 +237,19 @@ func blockingLPop(key string, timeoutSecs float64) (string, bool) {
 	}
 
 	// List is empty - create waiter and add to queue
-	w := &waiter{ch: make(chan result, 1)}
+	w := &models.Waiter{Ch: make(chan models.Result, 1)}
 	elem := waiters[key].PushBack(w)
 	listMtx.Unlock()
 
 	// Wait for result on the channel
 	if timeoutSecs <= 0 {
-		res := <-w.ch
-		return res.val, res.ok
+		res := <-w.Ch
+		return res.Val, res.Ok
 	} else {
 		timeout := time.Duration(timeoutSecs * float64(time.Second))
 		select {
-		case res := <-w.ch:
-			return res.val, res.ok
+		case res := <-w.Ch:
+			return res.Val, res.Ok
 		case <-time.After(timeout):
 			// Timeout - remove waiter from queue
 			listMtx.Lock()
@@ -285,9 +287,9 @@ func createStream(key string) {
 	streamStoreMtx.Lock()
 	defer streamStoreMtx.Unlock()
 
-	streamStore[key] = &Stream{
-		mtx:     &sync.RWMutex{},
-		entries: []StreamEntry{},
+	streamStore[key] = &models.Stream{
+		Mtx:     &sync.RWMutex{},
+		Entries: []models.StreamEntry{},
 	}
 
 	keysMtx.Lock()
@@ -295,7 +297,7 @@ func createStream(key string) {
 	keysMtx.Unlock()
 }
 
-func addToStream(key string, entryID string, values map[string]string) (string, error) {
+func addToStream(key string, entryID string, values []string) (string, error) {
 	streamStoreMtx.RLock()
 	streamPtr, exists := streamStore[key]
 	streamStoreMtx.RUnlock()
@@ -313,10 +315,10 @@ func addToStream(key string, entryID string, values map[string]string) (string, 
 		return "", err
 	}
 
-	streamPtr.mtx.Lock()
-	defer streamPtr.mtx.Unlock()
+	streamPtr.Mtx.Lock()
+	defer streamPtr.Mtx.Unlock()
 
-	var newEntry StreamEntry
+	var newEntry models.StreamEntry
 	newEntry.ID, err = generateStreamIDFromString(entryID, streamPtr)
 	if err != nil {
 		return "", err
@@ -324,6 +326,27 @@ func addToStream(key string, entryID string, values map[string]string) (string, 
 
 	newEntry.Values = values
 
-	streamPtr.entries = append(streamPtr.entries, newEntry)
+	streamPtr.Entries = append(streamPtr.Entries, newEntry)
 	return streamIDToString(newEntry.ID), nil
+}
+
+func getStreamEntries(key string, startingEntryID models.StreamID, endingEntryID models.StreamID) []models.StreamEntry {
+	var res []models.StreamEntry
+
+	streamStoreMtx.RLock()
+	stream := streamStore[key]
+	streamStoreMtx.RUnlock()
+
+	stream.Mtx.Lock()
+	defer stream.Mtx.Unlock()
+
+	i := 0
+	for ; i < len(stream.Entries) && (startingEntryID != stream.Entries[i].ID && startingEntryID.GreaterThan(stream.Entries[i].ID)); i++ {
+	}
+
+	for ; i < len(stream.Entries) && (endingEntryID == stream.Entries[i].ID || endingEntryID.GreaterThan(stream.Entries[i].ID)); i++ {
+		res = append(res, stream.Entries[i])
+	}
+
+	return res
 }

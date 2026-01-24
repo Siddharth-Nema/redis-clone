@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
 
 func handleSet(tokens []string) string {
@@ -191,13 +193,7 @@ func handleXADD(tokens []string) string {
 
 	key := tokens[1]
 	entryID := tokens[2]
-	values := make(map[string]string)
-
-	for i := 4; i < len(tokens); i = i + 2 {
-		if len(tokens) >= i+2 {
-			values[tokens[i]] = tokens[i+1]
-		}
-	}
+	values := tokens[3:]
 
 	res, err := addToStream(key, entryID, values)
 	if err != nil {
@@ -205,4 +201,27 @@ func handleXADD(tokens []string) string {
 	}
 
 	return convertToRESPString(res)
+}
+
+func handleXRANGE(tokens []string) string {
+	if len(tokens) < 4 {
+		return ERR
+	}
+
+	key := tokens[1]
+	startingEntryID, err := parseStreamIDFromString(tokens[2])
+	if err != nil {
+		return ERR
+	}
+
+	endingEntryID, err := parseStreamIDFromString(tokens[3])
+	if err != nil {
+		return ERR
+	}
+
+	entries := getStreamEntries(key, startingEntryID, endingEntryID)
+	res := models.StreamEntriesToReply(entries)
+
+	return convertToRESPMultiArray(res)
+
 }
