@@ -9,6 +9,14 @@ import (
 )
 
 func parseStreamIDFromString(s string) (models.StreamID, error) {
+
+	if s == "-" {
+		return models.StreamID{
+			Time: 0,
+			Seq:  0,
+		}, nil
+	}
+
 	time, seq, ok := strings.Cut(s, "-")
 	var err error
 
