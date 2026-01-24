@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +15,13 @@ func parseStreamIDFromString(s string) (models.StreamID, error) {
 		return models.StreamID{
 			Time: 0,
 			Seq:  0,
+		}, nil
+	}
+
+	if s == "+" {
+		return models.StreamID{
+			Time: math.MaxInt64,
+			Seq:  math.MaxInt64,
 		}, nil
 	}
 
