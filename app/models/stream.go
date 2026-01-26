@@ -8,7 +8,7 @@ import (
 
 // Stream
 type StreamEntry struct {
-	ID     StreamID
+	ID     StreamEntryID
 	Values []string
 }
 
@@ -17,9 +17,19 @@ type Stream struct {
 	Entries []StreamEntry
 }
 
-type StreamID struct {
+type StreamEntryID struct {
 	Time int64
 	Seq  int64
+}
+
+type ReadStream struct {
+	StreamID     string
+	StartEntryID StreamEntryID
+}
+
+type StreamOutput struct {
+	StreamID      string
+	StreamEntries []StreamEntry
 }
 
 var (
@@ -28,11 +38,11 @@ var (
 	ErrIDNotIncreasing = errors.New("The ID specified in XADD is equal or smaller than the target stream top item")
 )
 
-func (a StreamID) GreaterThan(b StreamID) bool {
+func (a StreamEntryID) GreaterThan(b StreamEntryID) bool {
 	return a.Time > b.Time || (a.Time == b.Time && a.Seq > b.Seq)
 }
 
-func (id StreamID) String() string {
+func (id StreamEntryID) String() string {
 	return strconv.FormatInt(id.Time, 10) + "-" +
 		strconv.FormatInt(id.Seq, 10)
 }
@@ -49,4 +59,17 @@ func StreamEntriesToReply(entries []StreamEntry) [][]interface{} {
 	}
 
 	return reply
+}
+
+func StreamOutputToReply(outputs []StreamOutput) [][]interface{} {
+	result := make([][]interface{}, 0, len(outputs))
+
+	for _, out := range outputs {
+		result = append(result, []interface{}{
+			out.StreamID,
+			StreamEntriesToReply(out.StreamEntries),
+		})
+	}
+
+	return result
 }

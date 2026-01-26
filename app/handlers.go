@@ -223,5 +223,43 @@ func handleXRANGE(tokens []string) string {
 	res := models.StreamEntriesToReply(entries)
 
 	return convertToRESPMultiArray(res)
+}
+
+func handleXREAD(tokens []string) string {
+	if len(tokens) < 4 {
+		return ERR
+	}
+
+	var rawStreamData []string
+	var streamsToRead []models.ReadStream
+
+	for i := 1; i < len(tokens); i++ {
+		if strings.ToLower(tokens[i]) == "streams" {
+			rawStreamData = tokens[i+1:]
+			break
+		}
+	}
+
+	if len(rawStreamData) == 0 {
+		return ERR
+	}
+
+	for i := 0; i < len(rawStreamData); i++ {
+		if len(rawStreamData) > i+1 {
+			startEntryID, err := parseStreamIDFromString(tokens[i+1])
+			if err != nil {
+				streamsToRead = append(streamsToRead, models.ReadStream{
+					StreamID:     rawStreamData[i],
+					StartEntryID: startEntryID,
+				})
+			}
+		}
+	}
+
+	//return convertToRESPArray([]string{streamsToRead[0].StreamID})
+
+	data := readStreams(streamsToRead)
+
+	return encodeRESP(models.StreamOutputToReply(data))
 
 }

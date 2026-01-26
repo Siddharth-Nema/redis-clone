@@ -59,6 +59,38 @@ func convertToRESPMultiArray(items [][]interface{}) string {
 	return response
 }
 
+func encodeRESP(v interface{}) string {
+	switch val := v.(type) {
+
+	case string:
+		return convertToRESPString(val)
+
+	case []string:
+		resp := "*" + strconv.Itoa(len(val)) + CRLF
+		for _, s := range val {
+			resp += convertToRESPString(s)
+		}
+		return resp
+
+	case []interface{}:
+		resp := "*" + strconv.Itoa(len(val)) + CRLF
+		for _, item := range val {
+			resp += encodeRESP(item)
+		}
+		return resp
+
+	case [][]interface{}:
+		resp := "*" + strconv.Itoa(len(val)) + CRLF
+		for _, item := range val {
+			resp += encodeRESP(item)
+		}
+		return resp
+
+	default:
+		panic(fmt.Sprintf("unsupported RESP type: %T", v))
+	}
+}
+
 func convertToSimpleError(args string) string {
 	return "-ERR " + args + "\r\n"
 }

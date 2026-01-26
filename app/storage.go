@@ -330,7 +330,7 @@ func addToStream(key string, entryID string, values []string) (string, error) {
 	return streamIDToString(newEntry.ID), nil
 }
 
-func getStreamEntries(key string, startingEntryID models.StreamID, endingEntryID models.StreamID) []models.StreamEntry {
+func getStreamEntries(key string, startingEntryID models.StreamEntryID, endingEntryID models.StreamEntryID) []models.StreamEntry {
 	var res []models.StreamEntry
 
 	streamStoreMtx.RLock()
@@ -346,6 +346,19 @@ func getStreamEntries(key string, startingEntryID models.StreamID, endingEntryID
 
 	for ; i < len(stream.Entries) && (endingEntryID == stream.Entries[i].ID || endingEntryID.GreaterThan(stream.Entries[i].ID)); i++ {
 		res = append(res, stream.Entries[i])
+	}
+
+	return res
+}
+
+func readStreams(streams []models.ReadStream) []models.StreamOutput {
+	var res []models.StreamOutput
+	for _, stream := range streams {
+		strOut := models.StreamOutput{
+			StreamID:      stream.StreamID,
+			StreamEntries: getStreamEntries(stream.StreamID, stream.StartEntryID, MaxStreamID),
+		}
+		res = append(res, strOut)
 	}
 
 	return res

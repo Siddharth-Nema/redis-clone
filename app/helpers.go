@@ -1,7 +1,6 @@
 package main
 
 import (
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -9,20 +8,13 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
 
-func parseStreamIDFromString(s string) (models.StreamID, error) {
-
+func parseStreamIDFromString(s string) (models.StreamEntryID, error) {
 	if s == "-" {
-		return models.StreamID{
-			Time: 0,
-			Seq:  0,
-		}, nil
+		return MinStreamID, nil
 	}
 
 	if s == "+" {
-		return models.StreamID{
-			Time: math.MaxInt64,
-			Seq:  math.MaxInt64,
-		}, nil
+		return MaxStreamID, nil
 	}
 
 	time, seq, ok := strings.Cut(s, "-")
@@ -32,7 +24,7 @@ func parseStreamIDFromString(s string) (models.StreamID, error) {
 		seq = "0"
 	}
 
-	var id models.StreamID
+	var id models.StreamEntryID
 	id.Time, err = strconv.ParseInt(time, 10, 64)
 	if err != nil {
 		return id, err
@@ -47,33 +39,33 @@ func parseStreamIDFromString(s string) (models.StreamID, error) {
 
 }
 
-func autoGenerateCompleteID() models.StreamID {
+func autoGenerateCompleteID() models.StreamEntryID {
 	time := time.Now().UnixMilli()
-	var newID models.StreamID
+	var newID models.StreamEntryID
 	newID.Time = time
 	newID.Seq = 0
 
 	return newID
 
 }
-func generateStreamIDFromString(s string, stream *models.Stream) (models.StreamID, error) {
+func generateStreamIDFromString(s string, stream *models.Stream) (models.StreamEntryID, error) {
 	if s == "*" {
 		return autoGenerateCompleteID(), nil
 	}
 
 	parts := strings.SplitN(s, "-", 2)
 	if len(parts) != 2 {
-		return models.StreamID{}, models.ErrInvalidID
+		return models.StreamEntryID{}, models.ErrInvalidID
 	}
 
 	t, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
-		return models.StreamID{}, models.ErrInvalidID
+		return models.StreamEntryID{}, models.ErrInvalidID
 	}
 	var seq int64
 
 	if parts[1] == "*" {
-		var lastID models.StreamID
+		var lastID models.StreamEntryID
 		if len(stream.Entries) == 0 {
 			if t == 0 {
 				seq = 1
@@ -91,18 +83,18 @@ func generateStreamIDFromString(s string, stream *models.Stream) (models.StreamI
 	} else {
 		seq, err = strconv.ParseInt(parts[1], 10, 64)
 		if err != nil {
-			return models.StreamID{}, models.ErrInvalidID
+			return models.StreamEntryID{}, models.ErrInvalidID
 		}
 	}
 
 	if t < 0 || seq < 0 || (t == 0 && seq == 0) {
-		return models.StreamID{}, models.ErrIDTooSmall
+		return models.StreamEntryID{}, models.ErrIDTooSmall
 	}
 
-	return models.StreamID{Time: t, Seq: seq}, nil
+	return models.StreamEntryID{Time: t, Seq: seq}, nil
 }
 
-func streamIDToString(streamID models.StreamID) string {
+func streamIDToString(streamID models.StreamEntryID) string {
 	return strconv.FormatInt(streamID.Time, 10) + "-" + strconv.FormatInt(streamID.Seq, 10)
 }
 
