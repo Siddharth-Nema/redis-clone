@@ -240,23 +240,21 @@ func handleXREAD(tokens []string) string {
 		}
 	}
 
-	if len(rawStreamData) == 0 {
+	if len(rawStreamData) == 0 || len(rawStreamData)%2 != 0 {
 		return ERR
 	}
 
-	for i := 0; i < len(rawStreamData); i++ {
-		if len(rawStreamData) > i+1 {
-			startEntryID, err := parseStreamIDFromString(tokens[i+1])
-			if err != nil {
-				streamsToRead = append(streamsToRead, models.ReadStream{
-					StreamID:     rawStreamData[i],
-					StartEntryID: startEntryID,
-				})
-			}
+	numOfStreams := len(rawStreamData) / 2
+
+	for i := 0; i < numOfStreams; i++ {
+		startEntryID, err := parseStreamIDFromString(rawStreamData[numOfStreams+i])
+		if err == nil {
+			streamsToRead = append(streamsToRead, models.ReadStream{
+				StreamID:     rawStreamData[i],
+				StartEntryID: startEntryID,
+			})
 		}
 	}
-
-	//return convertToRESPArray([]string{streamsToRead[0].StreamID})
 
 	data := readStreams(streamsToRead)
 
