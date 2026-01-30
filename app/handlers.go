@@ -232,8 +232,18 @@ func handleXREAD(tokens []string) string {
 
 	var rawStreamData []string
 	var streamsToRead []models.ReadStream
-
+	var timeout int
+	timeout = -1
 	for i := 1; i < len(tokens); i++ {
+		if strings.ToLower(tokens[i]) == "block" {
+			parsedTime, err := strconv.Atoi(tokens[i+1])
+			if err != nil {
+				return ERR
+			}
+			timeout = parsedTime
+			i++
+		}
+
 		if strings.ToLower(tokens[i]) == "streams" {
 			rawStreamData = tokens[i+1:]
 			break
@@ -256,8 +266,10 @@ func handleXREAD(tokens []string) string {
 		}
 	}
 
-	data := readStreams(streamsToRead)
-
-	return encodeRESP(models.StreamOutputToReply(data))
-
+	data := readStreams(streamsToRead, timeout)
+	if len(data) == 0 {
+		return NULL_ARRAY
+	} else {
+		return encodeRESP(models.StreamOutputToReply(data))
+	}
 }

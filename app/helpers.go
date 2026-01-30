@@ -118,3 +118,17 @@ func validateEntryID(entryID string, stream *models.Stream) error {
 
 	return nil
 }
+
+func removeWaiterFromStream(stream *models.Stream, waiter chan struct{}) {
+	stream.Mtx.Lock()
+	defer stream.Mtx.Unlock()
+	for i, w := range stream.Waiters {
+		if w == waiter {
+			stream.Waiters = append(
+				stream.Waiters[:i],
+				stream.Waiters[i+1:]...,
+			)
+			return
+		}
+	}
+}

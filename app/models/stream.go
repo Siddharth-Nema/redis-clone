@@ -15,6 +15,7 @@ type StreamEntry struct {
 type Stream struct {
 	Mtx     *sync.RWMutex
 	Entries []StreamEntry
+	Waiters []chan struct{}
 }
 
 type StreamEntryID struct {
@@ -72,4 +73,16 @@ func StreamOutputToReply(outputs []StreamOutput) [][]interface{} {
 	}
 
 	return result
+}
+
+func (stream *Stream) HasEntriesAfter(requestedID StreamEntryID) bool {
+	stream.Mtx.RLock()
+	defer stream.Mtx.RUnlock()
+
+	if stream.Entries[len(stream.Entries)-1].ID.GreaterThan(requestedID) {
+		return true
+	} else {
+		return false
+	}
+
 }

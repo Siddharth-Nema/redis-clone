@@ -9,39 +9,6 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
 
-// String Store
-var (
-	store    = make(map[string]string)
-	storeMtx sync.RWMutex
-)
-
-// String expiry store
-var (
-	expiry    = make(map[string]time.Time)
-	expiryMtx sync.RWMutex
-)
-
-// List Store
-var (
-	listStore      = make(map[string][]string)
-	listMutexes    = make(map[string]*sync.RWMutex)
-	listSemaphores = make(map[string]*Semaphore)
-	waiters        = make(map[string]*list.List)
-	listMutexesMtx sync.Mutex
-)
-
-// All keys Store
-var (
-	keys    = make(map[string]string)
-	keysMtx sync.RWMutex
-)
-
-// Streams
-var (
-	streamStore    = make(map[string]*models.Stream)
-	streamStoreMtx sync.RWMutex
-)
-
 func getType(key string) string {
 	keysMtx.RLock()
 	defer keysMtx.RUnlock()
@@ -94,14 +61,19 @@ func getExpiry(key string) time.Time {
 	}
 }
 
-func getListMutex(key string) *sync.RWMutex {
-	listMutexesMtx.Lock()
-	defer listMutexesMtx.Unlock()
+func getOrCreateList(key string) *ListData {
+	listMtx.Lock()
+	defer listMtx.Unlock()
 
-	if _, exists := listMutexes[key]; !exists {
-		listMutexes[key] = &sync.RWMutex{}
+	if _, exists := listStore[key]; !exists {
+		listStore[key] = &ListData{
+			items:     []string{},
+			semaphore: NewSemaphore(),
+			waiters:   list.New(),
+		}
+		setType(key, "list")
 	}
-	return listMutexes[key]
+	return listStore[key]
 }
 
 func deleteKey(key string) error {
@@ -120,68 +92,49 @@ func deleteKey(key string) error {
 
 	delete(expiry, key)
 
+	listMtx.Lock()
+	defer listMtx.Unlock()
+
+	delete(listStore, key)
+
 	return nil
 }
 
-func createListIfDoesntExist(key string) {
-	listMutexesMtx.Lock()
-	defer listMutexesMtx.Unlock()
-
-	if _, exists := listStore[key]; !exists {
-		listStore[key] = []string{}
-		setType(key, "list")
-	}
-	if _, exists := listSemaphores[key]; !exists {
-		listSemaphores[key] = NewSemaphore()
-	}
-	if _, exists := waiters[key]; !exists {
-		waiters[key] = list.New()
-	}
-}
-
 func pushToList(key string, vals []string) int {
-	mtx := getListMutex(key)
-	mtx.Lock()
-	defer mtx.Unlock()
-	createListIfDoesntExist(key)
+	ld := getOrCreateList(key)
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
 
-	sem := listSemaphores[key]
-	wq := waiters[key]
-
-	newLen := len(vals) + len(listStore[key])
+	newLen := len(vals) + len(ld.items)
 
 	i := 0
-	for i < len(vals) && wq.Len() > 0 {
-		e := wq.Front()
+	for i < len(vals) && ld.waiters.Len() > 0 {
+		e := ld.waiters.Front()
 		w := e.Value.(*models.Waiter)
-		wq.Remove(e)
+		ld.waiters.Remove(e)
 
 		w.Ch <- models.Result{Val: vals[i], Ok: true}
 		i++
 	}
 
 	if i < len(vals) {
-		listStore[key] = append(listStore[key], vals[i:]...)
-		sem.ReleaseN(len(vals) - i)
+		ld.items = append(ld.items, vals[i:]...)
+		ld.semaphore.ReleaseN(len(vals) - i)
 	}
 
 	return newLen
 }
 
 func prependToList(key string, vals []string) int {
-	mtx := getListMutex(key)
-	mtx.Lock()
-	defer mtx.Unlock()
-
-	createListIfDoesntExist(key)
-	sem := listSemaphores[key]
-	wq := waiters[key]
+	ld := getOrCreateList(key)
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
 
 	i := len(vals) - 1
-	for i >= 0 && wq.Len() > 0 {
-		e := wq.Front()
+	for i >= 0 && ld.waiters.Len() > 0 {
+		e := ld.waiters.Front()
 		w := e.Value.(*models.Waiter)
-		wq.Remove(e)
+		ld.waiters.Remove(e)
 
 		w.Ch <- models.Result{Val: vals[i], Ok: true}
 		i--
@@ -189,21 +142,21 @@ func prependToList(key string, vals []string) int {
 
 	if i >= 0 {
 		remaining := vals[:i+1]
-		listStore[key] = append(vals, listStore[key]...)
+		ld.items = append(vals, ld.items...)
 
-		sem.ReleaseN(len(remaining))
+		ld.semaphore.ReleaseN(len(remaining))
 	}
 
-	return len(listStore[key])
+	return len(ld.items)
 
 }
 
 func getItemsFromList(key string, start int, end int) []string {
-	mtx := getListMutex(key)
-	mtx.RLock()
-	defer mtx.RUnlock()
+	ld := getOrCreateList(key)
+	ld.mu.RLock()
+	defer ld.mu.RUnlock()
 
-	reqList := listStore[key]
+	reqList := ld.items
 	size := len(reqList)
 	if start < 0 {
 		start += size
@@ -223,25 +176,20 @@ func getItemsFromList(key string, start int, end int) []string {
 }
 
 func blockingLPop(key string, timeoutSecs float64) (string, bool) {
-	createListIfDoesntExist(key)
+	ld := getOrCreateList(key)
+	ld.mu.Lock()
 
-	listMtx := getListMutex(key)
-	listMtx.Lock()
-
-	// If list has items, pop immediately
-	if len(listStore[key]) > 0 {
-		val := listStore[key][0]
-		listStore[key] = listStore[key][1:]
-		listMtx.Unlock()
+	if len(ld.items) > 0 {
+		val := ld.items[0]
+		ld.items = ld.items[1:]
+		ld.mu.Unlock()
 		return val, true
 	}
 
-	// List is empty - create waiter and add to queue
 	w := &models.Waiter{Ch: make(chan models.Result, 1)}
-	elem := waiters[key].PushBack(w)
-	listMtx.Unlock()
+	elem := ld.waiters.PushBack(w)
+	ld.mu.Unlock()
 
-	// Wait for result on the channel
 	if timeoutSecs <= 0 {
 		res := <-w.Ch
 		return res.Val, res.Ok
@@ -251,31 +199,30 @@ func blockingLPop(key string, timeoutSecs float64) (string, bool) {
 		case res := <-w.Ch:
 			return res.Val, res.Ok
 		case <-time.After(timeout):
-			// Timeout - remove waiter from queue
-			listMtx.Lock()
-			waiters[key].Remove(elem)
-			listMtx.Unlock()
+			ld.mu.Lock()
+			ld.waiters.Remove(elem)
+			ld.mu.Unlock()
 			return "", false
 		}
 	}
 }
 
 func getLength(key string) int {
-	mtx := getListMutex(key)
-	mtx.RLock()
-	defer mtx.RUnlock()
+	ld := getOrCreateList(key)
+	ld.mu.RLock()
+	defer ld.mu.RUnlock()
 
-	return len(listStore[key])
+	return len(ld.items)
 }
 
 func popFromLeftofArray(key string, count int) ([]string, bool) {
-	mtx := getListMutex(key)
-	mtx.Lock()
-	defer mtx.Unlock()
+	ld := getOrCreateList(key)
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
 
-	if len(listStore[key]) >= count {
-		val := listStore[key][0:count]
-		listStore[key] = listStore[key][count:]
+	if len(ld.items) >= count {
+		val := ld.items[0:count]
+		ld.items = ld.items[count:]
 		return val, true
 	} else {
 		return []string{}, false
@@ -283,7 +230,6 @@ func popFromLeftofArray(key string, count int) ([]string, bool) {
 }
 
 func createStream(key string) {
-	// create stream entry and set key type
 	streamStoreMtx.Lock()
 	defer streamStoreMtx.Unlock()
 
@@ -327,6 +273,14 @@ func addToStream(key string, entryID string, values []string) (string, error) {
 	newEntry.Values = values
 
 	streamPtr.Entries = append(streamPtr.Entries, newEntry)
+
+	for _, ch := range streamPtr.Waiters {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
+
 	return streamIDToString(newEntry.ID), nil
 }
 
@@ -351,15 +305,74 @@ func getStreamEntries(key string, startingEntryID models.StreamEntryID, endingEn
 	return res
 }
 
-func readStreams(streams []models.ReadStream) []models.StreamOutput {
+func readStreams(streams []models.ReadStream, timeout int) []models.StreamOutput {
 	var res []models.StreamOutput
-	for _, stream := range streams {
-		strOut := models.StreamOutput{
-			StreamID:      stream.StreamID,
-			StreamEntries: getStreamEntries(stream.StreamID, stream.StartEntryID, MaxStreamID),
+	if timeout > 0 {
+		res = readStreamsBlocking(streams[0].StreamID, streams[0].StartEntryID, timeout)
+	} else {
+		for _, stream := range streams {
+			strOut := models.StreamOutput{
+				StreamID:      stream.StreamID,
+				StreamEntries: getStreamEntries(stream.StreamID, stream.StartEntryID, MaxStreamID),
+			}
+			res = append(res, strOut)
 		}
-		res = append(res, strOut)
 	}
 
 	return res
+}
+
+func readStreamsBlocking(key string, startingEntryID models.StreamEntryID, timeout int) []models.StreamOutput {
+	var res []models.StreamOutput
+
+	streamStoreMtx.Lock()
+	stream, exists := streamStore[key]
+	if !exists {
+		stream = &models.Stream{
+			Mtx:     &sync.RWMutex{},
+			Entries: []models.StreamEntry{},
+		}
+		streamStore[key] = stream
+		keys[key] = "stream"
+	}
+	streamStoreMtx.Unlock()
+
+	startingEntryID.Seq++
+
+	if stream.HasEntriesAfter(startingEntryID) {
+		res = append(res, models.StreamOutput{
+			StreamID:      key,
+			StreamEntries: getStreamEntries(key, startingEntryID, MaxStreamID),
+		})
+		return res
+	}
+
+	ch := make(chan struct{}, 1)
+	stream.Mtx.Lock()
+	stream.Waiters = append(stream.Waiters, ch)
+	stream.Mtx.Unlock()
+
+	var timeoutCh <-chan time.Time
+	if timeout > 0 {
+		timeoutCh = time.After(time.Duration(timeout) * time.Millisecond)
+	}
+
+	for {
+		select {
+		case <-ch:
+			if stream != nil {
+				removeWaiterFromStream(stream, ch)
+				return []models.StreamOutput{
+					{
+						StreamID:      key,
+						StreamEntries: getStreamEntries(key, startingEntryID, MaxStreamID),
+					},
+				}
+			}
+
+		case <-timeoutCh:
+			removeWaiterFromStream(stream, ch)
+			return nil
+		}
+	}
 }
