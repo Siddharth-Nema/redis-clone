@@ -1,6 +1,7 @@
 package store
 
 import (
+	"math"
 	"sync"
 	"time"
 
@@ -97,7 +98,7 @@ func (streamStore *StreamStore) GetStreamEntries(key string, startingEntryID mod
 
 func (streamStore *StreamStore) ReadStreams(streams []models.ReadStream, timeout int) []models.StreamOutput {
 	var res []models.StreamOutput
-	if timeout > 0 {
+	if timeout >= 0 {
 		res = streamStore.ReadStreamsBlocking(streams[0].StreamID, streams[0].StartEntryID, timeout)
 	} else {
 		for _, stream := range streams {
@@ -126,12 +127,13 @@ func (streamStore *StreamStore) ReadStreamsBlocking(key string, startingEntryID 
 	}
 	streamStore.mtx.Unlock()
 
-	startingEntryID.Seq++
+	nextEntryID := startingEntryID
+	nextEntryID.Seq = nextEntryID.Seq + 1
 
 	if stream.HasEntriesAfter(startingEntryID) {
 		res = append(res, models.StreamOutput{
 			StreamID:      key,
-			StreamEntries: streamStore.GetStreamEntries(key, startingEntryID, models.MaxStreamID),
+			StreamEntries: streamStore.GetStreamEntries(key, nextEntryID, models.MaxStreamID),
 		})
 		return res
 	}
@@ -144,6 +146,8 @@ func (streamStore *StreamStore) ReadStreamsBlocking(key string, startingEntryID 
 	var timeoutCh <-chan time.Time
 	if timeout > 0 {
 		timeoutCh = time.After(time.Duration(timeout) * time.Millisecond)
+	} else {
+		timeoutCh = time.After(time.Duration(math.MaxInt32) * time.Second)
 	}
 
 	for {
@@ -154,7 +158,7 @@ func (streamStore *StreamStore) ReadStreamsBlocking(key string, startingEntryID 
 				return []models.StreamOutput{
 					{
 						StreamID:      key,
-						StreamEntries: streamStore.GetStreamEntries(key, startingEntryID, models.MaxStreamID),
+						StreamEntries: streamStore.GetStreamEntries(key, nextEntryID, models.MaxStreamID),
 					},
 				}
 			}
