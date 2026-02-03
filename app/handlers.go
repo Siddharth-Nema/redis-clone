@@ -14,7 +14,8 @@ func handleSet(tokens []string) string {
 		return ERR
 
 	}
-	set(tokens[1], tokens[2])
+	stringStore.Set(tokens[1], tokens[2])
+	keyStore.SetType(tokens[1], "string")
 	for i := 3; i < len(tokens); i = i + 2 {
 		flag := tokens[i]
 		flag = strings.ToUpper(flag)
@@ -28,7 +29,7 @@ func handleSet(tokens []string) string {
 				}
 
 				exp := time.Now().Add(time.Second * time.Duration(durationInSec))
-				setExpiry(tokens[1], exp)
+				stringStore.SetExpiry(tokens[1], exp)
 			}
 		case "PX":
 			if i+1 < len(tokens) {
@@ -38,7 +39,7 @@ func handleSet(tokens []string) string {
 				}
 
 				exp := time.Now().Add(time.Millisecond * time.Duration(durationInMilliSec))
-				setExpiry(tokens[1], exp)
+				stringStore.SetExpiry(tokens[1], exp)
 			}
 		}
 	}
@@ -51,8 +52,8 @@ func handleGet(tokens []string) string {
 	if len(tokens) < 2 {
 		return ERR
 	}
-	val, exists := get(tokens[1])
-	exp := getExpiry(tokens[1])
+	val, exists := stringStore.Get(tokens[1])
+	exp := stringStore.GetExpiry(tokens[1])
 	var isExpired bool
 	if exp.IsZero() {
 		isExpired = false
@@ -64,7 +65,7 @@ func handleGet(tokens []string) string {
 	} else {
 		response = ERR
 		if isExpired {
-			deleteKey(tokens[1])
+			stringStore.Delete(tokens[1])
 		}
 	}
 
@@ -79,7 +80,8 @@ func handleRPUSH(tokens []string) string {
 	key := tokens[1]
 	val := tokens[2:]
 
-	count := pushToList(key, val)
+	count := listStore.PushToList(key, val)
+	keyStore.SetType(key, "list")
 
 	return convertToRESPInt(count)
 }
@@ -92,7 +94,8 @@ func handleLPUSH(tokens []string) string {
 	key := tokens[1]
 	val := tokens[2:]
 	slices.Reverse(val)
-	count := prependToList(key, val)
+	count := listStore.PrependToList(key, val)
+	keyStore.SetType(key, "list")
 
 	return convertToRESPInt(count)
 }
@@ -111,7 +114,7 @@ func handleLRANGE(tokens []string) string {
 		return ERR
 	}
 
-	reqList := getItemsFromList(tokens[1], start, end)
+	reqList := listStore.GetItemsFromList(tokens[1], start, end)
 	return convertToRESPArray(reqList)
 }
 
@@ -120,7 +123,7 @@ func handleLLEN(tokens []string) string {
 		return ERR
 	}
 
-	size := getLength(tokens[1])
+	size := listStore.GetLength(tokens[1])
 
 	return convertToRESPInt(size)
 }
@@ -139,7 +142,7 @@ func handleLPOP(tokens []string) string {
 		}
 	}
 
-	val, ok := popFromLeftofArray(tokens[1], count)
+	val, ok := listStore.PopFromLeftOfArray(tokens[1], count)
 
 	if ok {
 		if count == 1 {
@@ -165,7 +168,7 @@ func handleBLPOP(tokens []string) string {
 		}
 	}
 
-	val, ok := blockingLPop(tokens[1], timeout)
+	val, ok := listStore.BlockingLPop(tokens[1], timeout)
 	res := make([]string, 2)
 	res[0] = tokens[1]
 	res[1] = val
@@ -181,7 +184,7 @@ func handleTYPE(tokens []string) string {
 		return ERR
 	}
 
-	val := getType(tokens[1])
+	val := keyStore.GetType(tokens[1])
 
 	return convertToSimpleString(val)
 }
@@ -195,10 +198,11 @@ func handleXADD(tokens []string) string {
 	entryID := tokens[2]
 	values := tokens[3:]
 
-	res, err := addToStream(key, entryID, values)
+	res, err := streamStore.AddToStream(key, entryID, values)
 	if err != nil {
 		return convertToSimpleError(err.Error())
 	}
+	keyStore.SetType(key, "stream")
 
 	return convertToRESPString(res)
 }
@@ -209,17 +213,17 @@ func handleXRANGE(tokens []string) string {
 	}
 
 	key := tokens[1]
-	startingEntryID, err := parseStreamIDFromString(tokens[2])
+	startingEntryID, err := models.ParseStreamIDFromString(tokens[2])
 	if err != nil {
 		return ERR
 	}
 
-	endingEntryID, err := parseStreamIDFromString(tokens[3])
+	endingEntryID, err := models.ParseStreamIDFromString(tokens[3])
 	if err != nil {
 		return ERR
 	}
 
-	entries := getStreamEntries(key, startingEntryID, endingEntryID)
+	entries := streamStore.GetStreamEntries(key, startingEntryID, endingEntryID)
 	res := models.StreamEntriesToReply(entries)
 
 	return convertToRESPMultiArray(res)
@@ -257,7 +261,7 @@ func handleXREAD(tokens []string) string {
 	numOfStreams := len(rawStreamData) / 2
 
 	for i := 0; i < numOfStreams; i++ {
-		startEntryID, err := parseStreamIDFromString(rawStreamData[numOfStreams+i])
+		startEntryID, err := models.ParseStreamIDFromString(rawStreamData[numOfStreams+i])
 		if err == nil {
 			streamsToRead = append(streamsToRead, models.ReadStream{
 				StreamID:     rawStreamData[i],
@@ -266,7 +270,7 @@ func handleXREAD(tokens []string) string {
 		}
 	}
 
-	data := readStreams(streamsToRead, timeout)
+	data := streamStore.ReadStreams(streamsToRead, timeout)
 	if len(data) == 0 {
 		return NULL_ARRAY
 	} else {
