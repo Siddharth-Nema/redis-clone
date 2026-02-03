@@ -261,13 +261,22 @@ func handleXREAD(tokens []string) string {
 	numOfStreams := len(rawStreamData) / 2
 
 	for i := 0; i < numOfStreams; i++ {
-		startEntryID, err := models.ParseStreamIDFromString(rawStreamData[numOfStreams+i])
-		if err == nil {
-			streamsToRead = append(streamsToRead, models.ReadStream{
-				StreamID:     rawStreamData[i],
-				StartEntryID: startEntryID,
-			})
+		var startEntryID models.StreamEntryID
+		var err error
+		if rawStreamData[numOfStreams+i] == "$" {
+			startEntryID = streamStore.GetLatestStreamEntry(rawStreamData[i])
+		} else {
+			startEntryID, err = models.ParseStreamIDFromString(rawStreamData[numOfStreams+i])
+			if err != nil {
+				return ERR
+			}
 		}
+
+		streamsToRead = append(streamsToRead, models.ReadStream{
+			StreamID:     rawStreamData[i],
+			StartEntryID: startEntryID,
+		})
+
 	}
 
 	data := streamStore.ReadStreams(streamsToRead, timeout)

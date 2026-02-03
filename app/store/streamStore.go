@@ -169,3 +169,16 @@ func (streamStore *StreamStore) ReadStreamsBlocking(key string, startingEntryID 
 		}
 	}
 }
+
+func (streamStore *StreamStore) GetLatestStreamEntry(key string) models.StreamEntryID {
+	streamStore.mtx.RLock()
+	stream, exists := streamStore.store[key]
+	streamStore.mtx.RUnlock()
+
+	if !exists {
+		return models.MinStreamID
+	}
+	stream.Mtx.RLock()
+	defer stream.Mtx.RUnlock()
+	return stream.Entries[len(stream.Entries)-1].ID
+}
