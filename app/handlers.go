@@ -286,3 +286,19 @@ func handleXREAD(tokens []string) string {
 		return encodeRESP(models.StreamOutputToReply(data))
 	}
 }
+
+func handleINCR(tokens []string) string {
+	if len(tokens) < 2 {
+		return ERR
+	}
+
+	key := tokens[1]
+
+	val, ok := stringStore.Increment(key)
+
+	if ok {
+		return convertToRESPInt(val)
+	} else {
+		return ERR
+	}
+}

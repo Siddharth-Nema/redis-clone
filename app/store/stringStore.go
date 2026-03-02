@@ -1,6 +1,7 @@
 package store
 
 import (
+	"strconv"
 	"sync"
 	"time"
 )
@@ -80,4 +81,21 @@ func (stringStore *StringStore) IsExpired(key string, now time.Time) bool {
 		return false
 	}
 	return now.After(exp)
+}
+
+func (stringStore *StringStore) Increment(key string) (int, bool) {
+	stringStore.mtx.RLock()
+	defer stringStore.mtx.RUnlock()
+
+	val, ok := stringStore.store[key]
+	if ok {
+		num, err := strconv.Atoi(val)
+		if err == nil {
+			num += 1
+			stringStore.store[key] = strconv.Itoa(num)
+			return num, true
+		}
+	}
+
+	return 0, false
 }

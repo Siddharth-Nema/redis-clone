@@ -195,7 +195,6 @@ func (streamID *StreamEntryID) StreamIDToString() string {
 }
 
 func ParseStreamIDFromString(s string) (StreamEntryID, error) {
-
 	if s == "-" {
 		return MinStreamID, nil
 	}
