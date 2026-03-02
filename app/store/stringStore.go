@@ -87,14 +87,17 @@ func (stringStore *StringStore) Increment(key string) (int, bool) {
 	stringStore.mtx.RLock()
 	defer stringStore.mtx.RUnlock()
 
-	val, ok := stringStore.store[key]
-	if ok {
+	val, exists := stringStore.store[key]
+	if exists {
 		num, err := strconv.Atoi(val)
 		if err == nil {
 			num += 1
 			stringStore.store[key] = strconv.Itoa(num)
 			return num, true
 		}
+	} else {
+		stringStore.store[key] = "1"
+		return 1, true
 	}
 
 	return 0, false
