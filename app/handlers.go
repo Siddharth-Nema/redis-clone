@@ -299,6 +299,6 @@ func handleINCR(tokens []string) string {
 	if ok {
 		return convertToRESPInt(val)
 	} else {
-		return ERR
+		return convertToSimpleError("value is not an integer or out of range")
 	}
 }
