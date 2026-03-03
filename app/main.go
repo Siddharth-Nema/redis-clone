@@ -45,10 +45,11 @@ func handleConnection(client *models.Client) {
 
 		if len(tokens) > 0 {
 			var response string
-			if client.InMulti {
+			if client.InMulti && tokens[0] != "EXEC" {
 				response = queueCommands(tokens, client)
+			} else {
+				response = processQuery(tokens, client)
 			}
-			response = processQuery(tokens, client)
 			client.Conn.Write([]byte(response))
 		}
 	}

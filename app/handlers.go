@@ -317,10 +317,11 @@ func handleEXEC(client *models.Client) string {
 	if !client.InMulti {
 		return convertToSimpleError("EXEC without MULTI")
 	}
+
 	var response []string
 	for _, query := range client.Queue {
 		response = append(response, processQuery(query, client))
 	}
-
+	client.InMulti = false
 	return convertToRESPArray(response)
 }
