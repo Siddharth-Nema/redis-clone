@@ -323,5 +323,7 @@ func handleEXEC(client *models.Client) string {
 		response = append(response, processQuery(query, client))
 	}
 	client.InMulti = false
-	return convertToRESPArray(response)
+	client.Queue = [][]string{}
+
+	return convertToRESPArrayFromBulkStrings(response)
 }

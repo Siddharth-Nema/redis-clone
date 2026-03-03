@@ -157,3 +157,13 @@ func parseRESP(reader *bufio.Reader) ([]string, error) {
 
 	return result, nil
 }
+
+func convertToRESPArrayFromBulkStrings(items []string) string {
+	var response = "*" + strconv.Itoa(len(items)) + CRLF
+
+	for _, item := range items {
+		response += item
+	}
+
+	return response
+}
