@@ -302,3 +302,13 @@ func handleINCR(tokens []string) string {
 		return convertToSimpleError("value is not an integer or out of range")
 	}
 }
+
+func handleMULTI(client *models.Client) string {
+	client.InMulti = true
+	return convertToSimpleString("OK")
+}
+
+func queueCommands(tokens []string, client *models.Client) string {
+	client.Queue = append(client.Queue, tokens)
+	return convertToSimpleString("QUEUED")
+}
