@@ -312,3 +312,15 @@ func queueCommands(tokens []string, client *models.Client) string {
 	client.Queue = append(client.Queue, tokens)
 	return convertToSimpleString("QUEUED")
 }
+
+func handleEXEC(client *models.Client) string {
+	if !client.InMulti {
+		return convertToSimpleError("EXEC without MULTI")
+	}
+	var response []string
+	for _, query := range client.Queue {
+		response = append(response, processQuery(query, client))
+	}
+
+	return convertToRESPArray(response)
+}

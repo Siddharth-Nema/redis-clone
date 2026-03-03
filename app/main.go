@@ -95,6 +95,8 @@ func processQuery(tokens []string, client *models.Client) string {
 		response = handleINCR(tokens)
 	case "MULTI":
 		response = handleMULTI(client)
+	case "EXEC":
+		response = handleEXEC(client)
 	}
 
 	return response
