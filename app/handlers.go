@@ -332,8 +332,19 @@ func handleDISCARD(client *models.Client) string {
 }
 
 func handleINFO(tokens []string) string {
-	var response string
-	response += "role:" + role
+	var b strings.Builder
+	b.Grow(128)
 
-	return convertToRESPString(response)
+	b.WriteString("role:")
+	b.WriteString(role)
+	b.WriteString(CRLF)
+
+	b.WriteString("master_replid:")
+	b.WriteString(master_replid)
+	b.WriteString(CRLF)
+
+	b.WriteString("master_repl_offset:")
+	b.WriteString(strconv.FormatInt(int64(master_repl_offset), 10))
+
+	return convertToRESPString(b.String())
 }

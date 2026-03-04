@@ -16,9 +16,20 @@ var _ = os.Exit
 var role = "master"
 var port = 6379
 var replicaOf string
+var master_replid string
+var master_repl_offset int
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
+
+	generatedID, err := generateRandomAlphanumericID(40)
+	if err == nil {
+		master_replid = generatedID
+	} else {
+		master_replid = defaultMasterID
+	}
+
+	master_repl_offset = 0
 
 	for idx, arg := range os.Args {
 		if arg == "--port" && len(os.Args) > idx {
