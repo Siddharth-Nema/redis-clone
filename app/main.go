@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strconv"
+	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
@@ -13,42 +13,51 @@ import (
 var _ = net.Listen
 var _ = os.Exit
 
-var role = "master"
-var port = 6379
-var replicaOf string
-var master_replid string
-var master_repl_offset int
+var server *models.RedisServer
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
 
+	server = models.NewRedisServer()
+
 	generatedID, err := generateRandomAlphanumericID(40)
 	if err == nil {
-		master_replid = generatedID
+		server.MasterReplID = generatedID
 	} else {
-		master_replid = defaultMasterID
+		server.MasterReplID = defaultMasterID
 	}
 
-	master_repl_offset = 0
-
-	for idx, arg := range os.Args {
-		if arg == "--port" && len(os.Args) > idx {
-			newPort, err := strconv.Atoi(os.Args[idx+1])
-			if err == nil {
-				port = newPort
+	for i := 0; i < len(os.Args); i++ {
+		switch os.Args[i] {
+		case "--port":
+			if i+1 < len(os.Args) {
+				server.Port = os.Args[i+1]
+				i++
 			}
-		} else if arg == "--replicaof" && len(os.Args) > idx {
-			replicaOf = os.Args[idx+1]
-			role = "slave"
+		case "--replicaof":
+			if i+1 < len(os.Args) {
+				parts := strings.Fields(os.Args[i+1])
+				if len(parts) >= 2 {
+					server.MasterHost = parts[0]
+					if server.MasterHost == "localhost" {
+						server.MasterHost = "127.0.0.1"
+					}
+					server.MasterPort = parts[1]
+					server.Role = "slave"
+				}
+				i++
+			}
 		}
-
 	}
 
-	listeningAddress := "0.0.0.0:" + strconv.Itoa(port)
+	if server.Role == "slave" {
+		go sendPing(server.MasterHost + ":" + server.MasterPort)
+	}
 
+	listeningAddress := "0.0.0.0:" + server.Port
 	l, err := net.Listen("tcp", listeningAddress)
 	if err != nil {
-		fmt.Println("Failed to bind to port 6379")
+		fmt.Println("Failed to bind to port " + server.Port)
 		os.Exit(1)
 	}
 	for {

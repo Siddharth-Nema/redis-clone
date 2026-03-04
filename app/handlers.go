@@ -336,15 +336,15 @@ func handleINFO(tokens []string) string {
 	b.Grow(128)
 
 	b.WriteString("role:")
-	b.WriteString(role)
+	b.WriteString(server.Role)
 	b.WriteString(CRLF)
 
 	b.WriteString("master_replid:")
-	b.WriteString(master_replid)
+	b.WriteString(server.MasterReplID)
 	b.WriteString(CRLF)
 
 	b.WriteString("master_repl_offset:")
-	b.WriteString(strconv.FormatInt(int64(master_repl_offset), 10))
+	b.WriteString(strconv.FormatInt(int64(server.MasterReplOffset), 10))
 
 	return convertToRESPString(b.String())
 }
