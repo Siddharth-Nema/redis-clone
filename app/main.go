@@ -13,10 +13,11 @@ import (
 var _ = net.Listen
 var _ = os.Exit
 
+var role = "master"
+var port = 6379
+
 func main() {
 	fmt.Println("Logs from your program will appear here!")
-
-	port := 6379
 
 	for idx, arg := range os.Args {
 		if arg == "--port" && len(os.Args) > idx {
@@ -125,6 +126,8 @@ func executeCommand(tokens []string) string {
 		response = handleXREAD(tokens)
 	case "INCR":
 		response = handleINCR(tokens)
+	case "INFO":
+		response = handleINFO(tokens)
 	}
 
 	return response

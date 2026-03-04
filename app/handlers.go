@@ -330,3 +330,11 @@ func handleDISCARD(client *models.Client) string {
 
 	return convertToSimpleString("OK")
 }
+
+func handleINFO(tokens []string) string {
+	var response string
+
+	response += "role:" + role
+
+	return convertToRESPString(response)
+}
