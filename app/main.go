@@ -153,6 +153,8 @@ func executeCommand(tokens []string) string {
 		response = handleINCR(tokens)
 	case "INFO":
 		response = handleINFO(tokens)
+	case "REPLCONF":
+		response = OK
 	}
 
 	return response
