@@ -47,5 +47,11 @@ func sendHandshakeToMaster() error {
 		return err
 	}
 
+	psyncCommand := convertToRESPArray([]string{"PSYNC", "?", "-1"})
+	err = sendCommand(conn, psyncCommand)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
