@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
@@ -15,7 +16,20 @@ var _ = os.Exit
 func main() {
 	fmt.Println("Logs from your program will appear here!")
 
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+	port := 6379
+
+	for idx, arg := range os.Args {
+		if arg == "--port" && len(os.Args) > idx {
+			newPort, err := strconv.Atoi(os.Args[idx+1])
+			if err == nil {
+				port = newPort
+			}
+		}
+	}
+
+	listeningAddress := "0.0.0.0:" + strconv.Itoa(port)
+
+	l, err := net.Listen("tcp", listeningAddress)
 	if err != nil {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
