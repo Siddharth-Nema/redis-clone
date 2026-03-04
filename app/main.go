@@ -44,18 +44,35 @@ func handleConnection(client *models.Client) {
 		}
 
 		if len(tokens) > 0 {
-			var response string
-			if client.InMulti && tokens[0] != "EXEC" {
-				response = queueCommands(tokens, client)
-			} else {
-				response = processQuery(tokens, client)
-			}
-			client.Conn.Write([]byte(response))
+			client.Conn.Write([]byte(processCommand(tokens, client)))
 		}
 	}
 }
 
-func processQuery(tokens []string, client *models.Client) string {
+func processCommand(tokens []string, client *models.Client) string {
+	command := tokens[0]
+	switch command {
+	case "EXEC":
+		if !client.InMulti {
+			return convertToSimpleError("EXEC without MULTI")
+		}
+		return handleEXEC(client)
+	case "DISCARD":
+		if !client.InMulti {
+			return convertToSimpleError("DISCARD without MULTI")
+		}
+		return handleDISCARD(client)
+	case "MULTI":
+		return handleMULTI(client)
+	default:
+		if client.InMulti {
+			return queueCommands(tokens, client)
+		}
+		return executeCommand(tokens)
+	}
+}
+
+func executeCommand(tokens []string) string {
 	command := tokens[0]
 	var response string
 	switch command {
@@ -94,10 +111,6 @@ func processQuery(tokens []string, client *models.Client) string {
 		response = handleXREAD(tokens)
 	case "INCR":
 		response = handleINCR(tokens)
-	case "MULTI":
-		response = handleMULTI(client)
-	case "EXEC":
-		response = handleEXEC(client)
 	}
 
 	return response

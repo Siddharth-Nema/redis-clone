@@ -314,16 +314,19 @@ func queueCommands(tokens []string, client *models.Client) string {
 }
 
 func handleEXEC(client *models.Client) string {
-	if !client.InMulti {
-		return convertToSimpleError("EXEC without MULTI")
-	}
-
 	var response []string
 	for _, query := range client.Queue {
-		response = append(response, processQuery(query, client))
+		response = append(response, executeCommand(query))
 	}
 	client.InMulti = false
 	client.Queue = [][]string{}
 
 	return convertToRESPArrayFromBulkStrings(response)
+}
+
+func handleDISCARD(client *models.Client) string {
+	client.InMulti = false
+	client.Queue = [][]string{}
+
+	return convertToSimpleString("OK")
 }
