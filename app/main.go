@@ -15,6 +15,7 @@ var _ = os.Exit
 
 var role = "master"
 var port = 6379
+var replicaOf string
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
@@ -25,7 +26,11 @@ func main() {
 			if err == nil {
 				port = newPort
 			}
+		} else if arg == "--replicaof" && len(os.Args) > idx {
+			replicaOf = os.Args[idx+1]
+			role = "slave"
 		}
+
 	}
 
 	listeningAddress := "0.0.0.0:" + strconv.Itoa(port)
