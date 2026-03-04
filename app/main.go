@@ -155,6 +155,8 @@ func executeCommand(tokens []string) string {
 		response = handleINFO(tokens)
 	case "REPLCONF":
 		response = OK
+	case "PSYNC":
+		response = convertToSimpleString("FULLRESYNC " + server.MasterReplID + " 0")
 	}
 
 	return response
