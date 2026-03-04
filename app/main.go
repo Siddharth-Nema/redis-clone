@@ -51,7 +51,7 @@ func main() {
 	}
 
 	if server.Role == "slave" {
-		go sendPing(server.MasterHost + ":" + server.MasterPort)
+		go sendHandshakeToMaster()
 	}
 
 	listeningAddress := "0.0.0.0:" + server.Port
