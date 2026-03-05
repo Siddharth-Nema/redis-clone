@@ -167,3 +167,7 @@ func convertToRESPArrayFromBulkStrings(items []string) string {
 
 	return response
 }
+
+func convertToRDBFile(file string) string {
+	return "$" + strconv.Itoa(len(file)) + "\r\n" + file
+}

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/hex"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -347,4 +349,13 @@ func handleINFO(tokens []string) string {
 	b.WriteString(strconv.FormatInt(int64(server.MasterReplOffset), 10))
 
 	return convertToRESPString(b.String())
+}
+
+func handlePSYNC() string {
+	rdbHex := emptyRDB
+	rdbData, _ := hex.DecodeString(rdbHex)
+	rdbResp := convertToRDBFile(string(rdbData))
+
+	fullSyncResp := convertToSimpleString(fmt.Sprintf("FULLRESYNC %s 0", server.MasterReplID))
+	return fullSyncResp + rdbResp
 }
