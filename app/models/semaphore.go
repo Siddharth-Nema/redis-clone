@@ -36,14 +36,14 @@ func (s *Semaphore) AcquireTimeout(timeout time.Duration) bool {
 	}
 }
 
-func (s *Semaphore) releaseTimeout(timeout time.Duration) bool {
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
+// func (s *Semaphore) releaseTimeout(timeout time.Duration) bool {
+// 	timer := time.NewTimer(timeout)
+// 	defer timer.Stop()
 
-	select {
-	case s.ch <- struct{}{}:
-		return true
-	case <-timer.C:
-		return false
-	}
-}
+// 	select {
+// 	case s.ch <- struct{}{}:
+// 		return true
+// 	case <-timer.C:
+// 		return false
+// 	}
+// }

@@ -108,11 +108,11 @@ func processCommand(tokens []string, client *models.Client) string {
 		if client.InMulti {
 			return queueCommands(tokens, client)
 		}
-		return executeCommand(tokens)
+		return executeCommand(tokens, client)
 	}
 }
 
-func executeCommand(tokens []string) string {
+func executeCommand(tokens []string, client *models.Client) string {
 	command := tokens[0]
 	var response string
 	switch command {
@@ -127,12 +127,21 @@ func executeCommand(tokens []string) string {
 
 	case "SET":
 		response = handleSet(tokens)
+		if response != ERR {
+			go propogateCommandToReplicas(tokens)
+		}
 	case "GET":
 		response = handleGet(tokens)
 	case "RPUSH":
 		response = handleRPUSH(tokens)
+		if response != ERR {
+			go propogateCommandToReplicas(tokens)
+		}
 	case "LPUSH":
 		response = handleLPUSH(tokens)
+		if response != ERR {
+			go propogateCommandToReplicas(tokens)
+		}
 	case "LRANGE":
 		response = handleLRANGE(tokens)
 	case "LLEN":
@@ -141,22 +150,31 @@ func executeCommand(tokens []string) string {
 		response = handleLPOP(tokens)
 	case "BLPOP":
 		response = handleBLPOP(tokens)
+		if response != ERR {
+			go propogateCommandToReplicas(tokens)
+		}
 	case "TYPE":
 		response = handleTYPE(tokens)
 	case "XADD":
 		response = handleXADD(tokens)
+		if response != ERR {
+			go propogateCommandToReplicas(tokens)
+		}
 	case "XRANGE":
 		response = handleXRANGE(tokens)
 	case "XREAD":
 		response = handleXREAD(tokens)
 	case "INCR":
 		response = handleINCR(tokens)
+		if response != ERR {
+			go propogateCommandToReplicas(tokens)
+		}
 	case "INFO":
-		response = handleINFO(tokens)
+		response = handleINFO()
 	case "REPLCONF":
-		response = OK
+		response = handleREPLCONF(tokens, client)
 	case "PSYNC":
-		response = handlePSYNC()
+		response = handlePSYNC(client)
 	}
 
 	return response

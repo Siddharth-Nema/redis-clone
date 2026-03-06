@@ -21,13 +21,20 @@ func sendCommand(conn net.Conn, command string) error {
 	return nil
 }
 
+func propogateCommand(conn net.Conn, command string) error {
+	_, err := conn.Write([]byte(command))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func sendHandshakeToMaster() error {
 	address := server.MasterHost + ":" + server.MasterPort
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	pingMsg := "*1\r\n$4\r\nPING\r\n"
 	err = sendCommand(conn, pingMsg)
@@ -54,4 +61,10 @@ func sendHandshakeToMaster() error {
 	}
 
 	return nil
+}
+
+func propogateCommandToReplicas(tokens []string) {
+	for _, slave := range server.GetReplicas() {
+		propogateCommand(slave.Conn, convertToRESPArray(tokens))
+	}
 }

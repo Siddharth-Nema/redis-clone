@@ -45,7 +45,6 @@ func handleSet(tokens []string) string {
 			}
 		}
 	}
-
 	return OK
 }
 
@@ -318,7 +317,7 @@ func queueCommands(tokens []string, client *models.Client) string {
 func handleEXEC(client *models.Client) string {
 	var response []string
 	for _, query := range client.Queue {
-		response = append(response, executeCommand(query))
+		response = append(response, executeCommand(query, client))
 	}
 	client.InMulti = false
 	client.Queue = [][]string{}
@@ -333,7 +332,7 @@ func handleDISCARD(client *models.Client) string {
 	return convertToSimpleString("OK")
 }
 
-func handleINFO(tokens []string) string {
+func handleINFO() string {
 	var b strings.Builder
 	b.Grow(128)
 
@@ -351,7 +350,24 @@ func handleINFO(tokens []string) string {
 	return convertToRESPString(b.String())
 }
 
-func handlePSYNC() string {
+func handleREPLCONF(tokens []string, client *models.Client) string {
+	for i := 0; i < len(tokens); i++ {
+		switch tokens[i] {
+		case "listening-port":
+			if i+1 < len(tokens) {
+				client.ListeningPort = tokens[i+1]
+				i++
+			}
+		}
+	}
+
+	return OK
+}
+
+func handlePSYNC(client *models.Client) string {
+	client.IsSlave = true
+	server.AddReplica(client)
+
 	rdbHex := emptyRDB
 	rdbData, _ := hex.DecodeString(rdbHex)
 	rdbResp := convertToRDBFile(string(rdbData))

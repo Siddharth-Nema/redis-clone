@@ -11,10 +11,12 @@ var clientsMu sync.Mutex
 var ClientList = make(map[uint64]*Client)
 
 type Client struct {
-	Id      uint64
-	Conn    net.Conn
-	Queue   [][]string
-	InMulti bool
+	Id            uint64
+	Conn          net.Conn
+	Queue         [][]string
+	InMulti       bool
+	IsSlave       bool
+	ListeningPort string
 }
 
 func NewClient(conn net.Conn) *Client {
@@ -24,6 +26,7 @@ func NewClient(conn net.Conn) *Client {
 		Conn:    conn,
 		Queue:   [][]string{},
 		InMulti: false,
+		IsSlave: false,
 	}
 	clientsMu.Lock()
 	ClientList[id] = c
