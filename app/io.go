@@ -96,25 +96,32 @@ func convertToSimpleError(args string) string {
 }
 
 // parseRESP reads and parses a complete RESP array command
-func parseRESP(reader *bufio.Reader) ([]string, error) {
+func parseRESP(reader *bufio.Reader) ([]string, int, error) {
+
+	var bytesRead int
+
 	// Read first byte to determine type
 	firstByte, err := reader.ReadByte()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if firstByte != '*' {
-		return nil, fmt.Errorf("expected array marker '*'")
+		return nil, 0, fmt.Errorf("expected array marker '*'")
 	}
+
+	bytesRead++ // for '*'
 
 	line, err := reader.ReadString('\n')
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+
+	bytesRead += len(line) // for count line including \r\n
 
 	count, err := strconv.Atoi(strings.TrimSpace(line))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	var result []string
@@ -124,38 +131,50 @@ func parseRESP(reader *bufio.Reader) ([]string, error) {
 		// Read bulk string marker '$'
 		marker, err := reader.ReadByte()
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
+		bytesRead++ // for '$'
+
 		if marker != '$' {
-			return nil, fmt.Errorf("expected bulk string marker '$'")
+			return nil, 0, fmt.Errorf("expected bulk string marker '$'")
 		}
 
 		// Read length
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
+
+		bytesRead += len(line) // for length line including \r\n
 
 		length, err := strconv.Atoi(strings.TrimSpace(line))
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		// Read the actual data
 		data := make([]byte, length)
-		_, err = reader.Read(data)
+		n, err := reader.Read(data)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
+
+		bytesRead += n // for actual data
 
 		result = append(result, string(data))
 
 		// Read trailing \r\n
-		reader.ReadString('\n')
+		crlf := make([]byte, 2)
+		n, err = reader.Read(crlf)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		bytesRead += n // for \r\n
 	}
 
-	return result, nil
+	return result, bytesRead, nil
 }
 
 func convertToRESPArrayFromBulkStrings(items []string) string {

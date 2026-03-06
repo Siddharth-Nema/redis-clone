@@ -118,13 +118,13 @@ func readReplicationStream(conn net.Conn) {
 		if _, err := io.ReadFull(reader, rdb); err != nil {
 			fmt.Println("replication read RDB payload error:", err)
 			return
-		}	
+		}
 		fmt.Println("RDB loaded, bytes:", rdbLen)
 	}
 
 	dummyClient := &models.Client{}
 	for {
-		tokens, err := parseRESP(reader)
+		tokens, bytesRead, err := parseRESP(reader)
 		if err != nil {
 			fmt.Println("replication stream ended:", err)
 			return
@@ -138,5 +138,7 @@ func readReplicationStream(conn net.Conn) {
 		if tokens[0] == "REPLCONF" {
 			conn.Write([]byte(response))
 		}
+
+		server.MasterReplOffset += bytesRead
 	}
 }

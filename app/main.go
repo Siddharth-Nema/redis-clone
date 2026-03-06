@@ -77,7 +77,7 @@ func handleConnection(client *models.Client) {
 	reader := bufio.NewReader(client.Conn)
 
 	for {
-		tokens, err := parseRESP(reader)
+		tokens, bytesRead, err := parseRESP(reader)
 		if err != nil {
 			fmt.Println("Client disconnected:", err)
 			return
@@ -85,6 +85,7 @@ func handleConnection(client *models.Client) {
 
 		if len(tokens) > 0 {
 			client.Conn.Write([]byte(processCommand(tokens, client)))
+			server.MasterReplOffset += bytesRead
 		}
 	}
 }
