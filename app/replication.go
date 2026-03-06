@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
+
+	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
 
 func sendCommand(conn net.Conn, command string) error {
@@ -60,11 +63,28 @@ func sendHandshakeToMaster() error {
 		return err
 	}
 
+	go readReplicationStream(conn)
 	return nil
 }
 
 func propogateCommandToReplicas(tokens []string) {
 	for _, slave := range server.GetReplicas() {
 		propogateCommand(slave.Conn, convertToRESPArray(tokens))
+	}
+}
+
+func readReplicationStream(conn net.Conn) {
+	reader := bufio.NewReader(conn)
+	dummyClient := &models.Client{}
+	for {
+		tokens, err := parseRESP(reader)
+		if err != nil {
+			fmt.Println("replication stream ended:", err)
+			return
+		}
+		if len(tokens) == 0 {
+			continue
+		}
+		_ = executeCommand(tokens, dummyClient)
 	}
 }
