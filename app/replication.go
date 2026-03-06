@@ -3,7 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
+	"strconv"
+	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
@@ -58,7 +61,7 @@ func sendHandshakeToMaster() error {
 	}
 
 	psyncCommand := convertToRESPArray([]string{"PSYNC", "?", "-1"})
-	err = sendCommand(conn, psyncCommand)
+	err = propogateCommand(conn, psyncCommand)
 	if err != nil {
 		return err
 	}
@@ -75,6 +78,50 @@ func propogateCommandToReplicas(tokens []string) {
 
 func readReplicationStream(conn net.Conn) {
 	reader := bufio.NewReader(conn)
+
+	fmt.Println("Reading Master Stream")
+
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("replication read FULLRESYNC error:", err)
+		return
+	}
+	fmt.Println("FULLRESYNC response:", strings.TrimSpace(line))
+
+	// Read $<len>\r\n<rdb-bytes>
+	b, err := reader.ReadByte()
+	if err != nil {
+		fmt.Println("invalid RDB prefix read:", err)
+		return
+	}
+	if b != '$' {
+		fmt.Println("expected '$' for RDB length, got:", string(b))
+		return
+	}
+
+	lenLine, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("replication read RDB length error:", err)
+		return
+	}
+
+	rdbLen, err := strconv.Atoi(strings.TrimSpace(lenLine))
+	if err != nil {
+		fmt.Println("invalid RDB length:", err)
+		return
+	}
+
+	fmt.Println("RDB file length:", rdbLen)
+
+	if rdbLen > 0 {
+		rdb := make([]byte, rdbLen)
+		if _, err := io.ReadFull(reader, rdb); err != nil {
+			fmt.Println("replication read RDB payload error:", err)
+			return
+		}	
+		fmt.Println("RDB loaded, bytes:", rdbLen)
+	}
+
 	dummyClient := &models.Client{}
 	for {
 		tokens, err := parseRESP(reader)
