@@ -351,6 +351,9 @@ func handleINFO() string {
 }
 
 func handleREPLCONF(tokens []string, client *models.Client) string {
+
+	response := OK
+
 	for i := 0; i < len(tokens); i++ {
 		switch tokens[i] {
 		case "listening-port":
@@ -358,10 +361,12 @@ func handleREPLCONF(tokens []string, client *models.Client) string {
 				client.ListeningPort = tokens[i+1]
 				i++
 			}
+		case "GETACK":
+			response = convertToRESPArray([]string{"REPLCONF", "ACK", strconv.Itoa(server.MasterReplOffset)})
 		}
 	}
 
-	return OK
+	return response
 }
 
 func handlePSYNC(client *models.Client) string {

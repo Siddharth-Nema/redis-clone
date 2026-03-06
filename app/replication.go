@@ -15,12 +15,12 @@ func sendCommand(conn net.Conn, command string) error {
 	}
 
 	responseBuffer := make([]byte, 1024)
-	bytesRead, err := conn.Read(responseBuffer)
+	_, err = conn.Read(responseBuffer)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Received: %s", string(responseBuffer[:bytesRead]))
+	//fmt.Printf("Received: %s", string(responseBuffer[:bytesRead]))
 	return nil
 }
 
@@ -85,6 +85,11 @@ func readReplicationStream(conn net.Conn) {
 		if len(tokens) == 0 {
 			continue
 		}
-		_ = executeCommand(tokens, dummyClient)
+
+		response := executeCommand(tokens, dummyClient)
+		fmt.Println(tokens)
+		if tokens[0] == "REPLCONF" {
+			conn.Write([]byte(response))
+		}
 	}
 }

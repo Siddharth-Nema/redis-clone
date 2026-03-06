@@ -13,11 +13,11 @@ import (
 var _ = net.Listen
 var _ = os.Exit
 
+// Instance of the current running redis server
 var server *models.RedisServer
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
-
 	server = models.NewRedisServer()
 
 	generatedID, err := generateRandomAlphanumericID(40)
