@@ -351,9 +351,7 @@ func handleINFO() string {
 }
 
 func handleREPLCONF(tokens []string, client *models.Client) string {
-
 	response := OK
-
 	for i := 0; i < len(tokens); i++ {
 		switch tokens[i] {
 		case "listening-port":
@@ -379,4 +377,26 @@ func handlePSYNC(client *models.Client) string {
 
 	fullSyncResp := convertToSimpleString(fmt.Sprintf("FULLRESYNC %s 0", server.MasterReplID))
 	return fullSyncResp + rdbResp
+}
+
+func handleWAIT(tokens []string) string {
+	thresholdSlaves := 0
+	thresholdOffset := 0
+
+	if len(tokens) >= 2 {
+		reqSlaves, err := strconv.Atoi(tokens[1])
+		if err == nil {
+			thresholdSlaves = reqSlaves
+		}
+
+	}
+	if len(tokens) >= 3 {
+		threshold, err := strconv.Atoi(tokens[2])
+		if err == nil {
+			thresholdOffset = threshold
+		}
+	}
+
+	return convertToRESPInt(checkReplicationStatus(thresholdSlaves, thresholdOffset))
+
 }

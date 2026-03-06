@@ -142,3 +142,7 @@ func readReplicationStream(conn net.Conn) {
 		server.MasterReplOffset += bytesRead
 	}
 }
+
+func checkReplicationStatus(thresoldSlaves int, thresholdOffset int) int {
+	return 0
+}

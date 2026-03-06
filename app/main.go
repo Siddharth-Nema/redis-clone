@@ -176,6 +176,8 @@ func executeCommand(tokens []string, client *models.Client) string {
 		response = handleREPLCONF(tokens, client)
 	case "PSYNC":
 		response = handlePSYNC(client)
+	case "WAIT":
+		response = handleWAIT(tokens)
 	}
 
 	return response
