@@ -11,20 +11,29 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
 
-func sendCommand(conn net.Conn, command string) error {
+func sendCommand(conn net.Conn, command string) ([]string, error) {
 	_, err := conn.Write([]byte(command))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	responseBuffer := make([]byte, 1024)
-	_, err = conn.Read(responseBuffer)
+	responseBuffer := make([]byte, 4096)
+	n, err := conn.Read(responseBuffer)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	//fmt.Printf("Received: %s", string(responseBuffer[:bytesRead]))
-	return nil
+	raw := string(responseBuffer[:n])
+	parts := strings.Split(raw, "\r\n")
+
+	response := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p != "" {
+			response = append(response, p)
+		}
+	}
+
+	return response, nil
 }
 
 func propogateCommand(conn net.Conn, command string) error {
@@ -35,6 +44,23 @@ func propogateCommand(conn net.Conn, command string) error {
 	return nil
 }
 
+func getACK(client *models.Client) int {
+	response, err := sendCommand(client.Conn, convertToRESPArray(strings.Split(getACKCommand, " ")))
+
+	if err != nil {
+		return 0
+	}
+
+	fmt.Println(response)
+	slaveOffset, err := strconv.Atoi(response[2])
+
+	if err != nil {
+		return 0
+	}
+
+	return slaveOffset
+}
+
 func sendHandshakeToMaster() error {
 	address := server.MasterHost + ":" + server.MasterPort
 	conn, err := net.Dial("tcp", address)
@@ -43,19 +69,19 @@ func sendHandshakeToMaster() error {
 	}
 
 	pingMsg := "*1\r\n$4\r\nPING\r\n"
-	err = sendCommand(conn, pingMsg)
+	_, err = sendCommand(conn, pingMsg)
 	if err != nil {
 		return err
 	}
 
 	replConfPort := convertToRESPArray([]string{"REPLCONF", "listening-port", server.Port})
-	err = sendCommand(conn, replConfPort)
+	_, err = sendCommand(conn, replConfPort)
 	if err != nil {
 		return err
 	}
 
 	replConfCapabilities := convertToRESPArray([]string{"REPLCONF", "capa", "psync2"})
-	err = sendCommand(conn, replConfCapabilities)
+	_, err = sendCommand(conn, replConfCapabilities)
 	if err != nil {
 		return err
 	}
@@ -143,6 +169,14 @@ func readReplicationStream(conn net.Conn) {
 	}
 }
 
-func checkReplicationStatus(thresoldSlaves int, thresholdOffset int) int {
-	return 0
+func checkReplicationStatus(thresoldSlaves int, timout int) int {
+	fmt.Println(len(server.GetReplicas()))
+	//count := 0
+	// for _, slave := range server.GetReplicas() {
+	// 	//fmt.Println(slave.Id)
+	// 	getACK(slave)
+	// 	count++
+	// }
+
+	return len(server.GetReplicas())
 }

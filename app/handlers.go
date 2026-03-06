@@ -381,7 +381,7 @@ func handlePSYNC(client *models.Client) string {
 
 func handleWAIT(tokens []string) string {
 	thresholdSlaves := 0
-	thresholdOffset := 0
+	timeout := 0
 
 	if len(tokens) >= 2 {
 		reqSlaves, err := strconv.Atoi(tokens[1])
@@ -391,12 +391,12 @@ func handleWAIT(tokens []string) string {
 
 	}
 	if len(tokens) >= 3 {
-		threshold, err := strconv.Atoi(tokens[2])
+		parsedTimeout, err := strconv.Atoi(tokens[2])
 		if err == nil {
-			thresholdOffset = threshold
+			timeout = parsedTimeout
 		}
 	}
 
-	return convertToRESPInt(checkReplicationStatus(thresholdSlaves, thresholdOffset))
+	return convertToRESPInt(checkReplicationStatus(thresholdSlaves, timeout))
 
 }
