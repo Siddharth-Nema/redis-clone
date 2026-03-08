@@ -45,6 +45,18 @@ func propogateCommand(conn net.Conn, command string) error {
 	return nil
 }
 
+// func sendGetACK(client *models.Client) error {
+// 	command := strings.Split(getACKCommand, " ")
+// 	err := propogateCommand(client.Conn, convertToRESPArray(command))
+
+// 	if err != nil {
+// 		fmt.Printf("Error sending command to slave: %s\n", err)
+// 		return err
+// 	}
+
+// 	return nil
+// }
+
 func sendHandshakeToMaster() error {
 	address := server.MasterHost + ":" + server.MasterPort
 	conn, err := net.Dial("tcp", address)
@@ -82,7 +94,7 @@ func sendHandshakeToMaster() error {
 
 func propogateCommandToReplicas(tokens []string) {
 	command := convertToRESPArray(tokens)
-	server.MasterReplOffset += calculateRESPSize(tokens)
+	server.AddToOffset(calculateRESPSize(tokens))
 	for _, slave := range server.GetReplicas() {
 		propogateCommand(slave.Conn, command)
 	}
@@ -122,12 +134,15 @@ func readReplicationStream(conn net.Conn) {
 		return
 	}
 
+	// fmt.Println("RDB file length:", rdbLen)
+
 	if rdbLen > 0 {
 		rdb := make([]byte, rdbLen)
 		if _, err := io.ReadFull(reader, rdb); err != nil {
 			fmt.Println("replication read RDB payload error:", err)
 			return
 		}
+		fmt.Println("RDB loaded, bytes:", rdbLen)
 	}
 
 	dummyClient := &models.Client{}
@@ -142,19 +157,17 @@ func readReplicationStream(conn net.Conn) {
 		}
 
 		response := executeCommand(tokens, dummyClient)
-		server.MasterReplOffset += bytesRead // for slave
-		//fmt.Println(tokens)
+		server.AddToOffset(bytesRead) // for slave
 		if tokens[0] == "REPLCONF" {
 			conn.Write([]byte(response))
 		}
-
 	}
 }
 
 func checkReplicationStatus(thresholdSlaves int, timeoutMs int) int {
 	replicas := server.GetReplicas()
 	numReplicas := len(replicas)
-	thresholdOffsest := server.MasterReplOffset
+	thresholdOffsest := server.GetOffset()
 
 	if thresholdSlaves == 0 || thresholdOffsest == 0 {
 		return numReplicas

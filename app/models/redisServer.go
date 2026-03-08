@@ -8,7 +8,8 @@ type RedisServer struct {
 	MasterHost       string
 	MasterPort       string
 	MasterReplID     string
-	MasterReplOffset int
+	masterReplOffset int
+	offsetMtx        sync.RWMutex
 	mu               sync.RWMutex // Protects the fields above
 	replicasList     []*Client
 	replicaMtx       sync.RWMutex
@@ -18,9 +19,27 @@ func NewRedisServer() *RedisServer {
 	return &RedisServer{
 		Role:             "master",
 		Port:             "6379",
-		MasterReplOffset: 0,
+		masterReplOffset: 0,
 		replicasList:     []*Client{},
 	}
+}
+
+func (s *RedisServer) GetOffset() int {
+	s.offsetMtx.RLock()
+	defer s.offsetMtx.RUnlock()
+
+	return s.masterReplOffset
+}
+
+func (s *RedisServer) AddToOffset(val int) {
+	s.offsetMtx.RLock()
+	defer s.offsetMtx.RUnlock()
+
+	s.masterReplOffset += val
+}
+
+func (s *RedisServer) IsMaster() bool {
+	return s.Role == "master"
 }
 
 func (s *RedisServer) GetReplicas() []*Client {

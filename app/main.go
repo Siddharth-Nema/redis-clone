@@ -132,19 +132,19 @@ func executeCommand(tokens []string, client *models.Client) string {
 
 	case "SET":
 		response = handleSet(tokens)
-		if response != ERR {
+		if response != ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "GET":
 		response = handleGet(tokens)
 	case "RPUSH":
 		response = handleRPUSH(tokens)
-		if response != ERR {
+		if response != ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "LPUSH":
 		response = handleLPUSH(tokens)
-		if response != ERR {
+		if response != ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "LRANGE":
@@ -155,14 +155,14 @@ func executeCommand(tokens []string, client *models.Client) string {
 		response = handleLPOP(tokens)
 	case "BLPOP":
 		response = handleBLPOP(tokens)
-		if response != ERR {
+		if response != ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "TYPE":
 		response = handleTYPE(tokens)
 	case "XADD":
 		response = handleXADD(tokens)
-		if response != ERR {
+		if response != ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "XRANGE":
@@ -171,7 +171,7 @@ func executeCommand(tokens []string, client *models.Client) string {
 		response = handleXREAD(tokens)
 	case "INCR":
 		response = handleINCR(tokens)
-		if response != ERR {
+		if response != ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "INFO":

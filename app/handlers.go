@@ -345,7 +345,7 @@ func handleINFO() string {
 	b.WriteString(CRLF)
 
 	b.WriteString("master_repl_offset:")
-	b.WriteString(strconv.FormatInt(int64(server.MasterReplOffset), 10))
+	b.WriteString(strconv.FormatInt(int64(server.GetOffset()), 10))
 
 	return convertToRESPString(b.String())
 }
@@ -360,7 +360,7 @@ func handleREPLCONF(tokens []string, client *models.Client) string {
 				i++
 			}
 		case "GETACK":
-			response = convertToRESPArray([]string{"REPLCONF", "ACK", strconv.Itoa(server.MasterReplOffset)})
+			response = convertToRESPArray([]string{"REPLCONF", "ACK", strconv.Itoa(server.GetOffset())})
 		case "ACK":
 			if i+1 < len(tokens) {
 				offset, err := strconv.Atoi(tokens[i+1])
