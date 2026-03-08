@@ -361,6 +361,15 @@ func handleREPLCONF(tokens []string, client *models.Client) string {
 			}
 		case "GETACK":
 			response = convertToRESPArray([]string{"REPLCONF", "ACK", strconv.Itoa(server.MasterReplOffset)})
+		case "ACK":
+			if i+1 < len(tokens) {
+				offset, err := strconv.Atoi(tokens[i+1])
+				if err == nil {
+					client.LastKnownOffset = offset
+				}
+				i++
+			}
+			response = ""
 		}
 	}
 
@@ -396,7 +405,6 @@ func handleWAIT(tokens []string) string {
 			timeout = parsedTimeout
 		}
 	}
-
 	return convertToRESPInt(checkReplicationStatus(thresholdSlaves, timeout))
 
 }

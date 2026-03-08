@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
@@ -42,23 +43,6 @@ func propogateCommand(conn net.Conn, command string) error {
 		return err
 	}
 	return nil
-}
-
-func getACK(client *models.Client) int {
-	response, err := sendCommand(client.Conn, convertToRESPArray(strings.Split(getACKCommand, " ")))
-
-	if err != nil {
-		return 0
-	}
-
-	fmt.Println(response)
-	slaveOffset, err := strconv.Atoi(response[2])
-
-	if err != nil {
-		return 0
-	}
-
-	return slaveOffset
 }
 
 func sendHandshakeToMaster() error {
@@ -97,15 +81,16 @@ func sendHandshakeToMaster() error {
 }
 
 func propogateCommandToReplicas(tokens []string) {
+	command := convertToRESPArray(tokens)
+	server.MasterReplOffset += calculateRESPSize(tokens)
 	for _, slave := range server.GetReplicas() {
-		propogateCommand(slave.Conn, convertToRESPArray(tokens))
+		propogateCommand(slave.Conn, command)
 	}
+
 }
 
 func readReplicationStream(conn net.Conn) {
 	reader := bufio.NewReader(conn)
-
-	fmt.Println("Reading Master Stream")
 
 	line, err := reader.ReadString('\n')
 	if err != nil {
@@ -137,15 +122,12 @@ func readReplicationStream(conn net.Conn) {
 		return
 	}
 
-	fmt.Println("RDB file length:", rdbLen)
-
 	if rdbLen > 0 {
 		rdb := make([]byte, rdbLen)
 		if _, err := io.ReadFull(reader, rdb); err != nil {
 			fmt.Println("replication read RDB payload error:", err)
 			return
 		}
-		fmt.Println("RDB loaded, bytes:", rdbLen)
 	}
 
 	dummyClient := &models.Client{}
@@ -160,23 +142,53 @@ func readReplicationStream(conn net.Conn) {
 		}
 
 		response := executeCommand(tokens, dummyClient)
-		fmt.Println(tokens)
+		server.MasterReplOffset += bytesRead // for slave
+		//fmt.Println(tokens)
 		if tokens[0] == "REPLCONF" {
 			conn.Write([]byte(response))
 		}
 
-		server.MasterReplOffset += bytesRead
 	}
 }
 
-func checkReplicationStatus(thresoldSlaves int, timout int) int {
-	fmt.Println(len(server.GetReplicas()))
-	//count := 0
-	// for _, slave := range server.GetReplicas() {
-	// 	//fmt.Println(slave.Id)
-	// 	getACK(slave)
-	// 	count++
-	// }
+func checkReplicationStatus(thresholdSlaves int, timeoutMs int) int {
+	replicas := server.GetReplicas()
+	numReplicas := len(replicas)
+	thresholdOffsest := server.MasterReplOffset
 
-	return len(server.GetReplicas())
+	if thresholdSlaves == 0 || thresholdOffsest == 0 {
+		return numReplicas
+	}
+
+	propogateCommandToReplicas(strings.Split(getACKCommand, " "))
+
+	var timeoutChan <-chan time.Time
+	if timeoutMs > 0 {
+		timeoutChan = time.After(time.Duration(timeoutMs) * time.Millisecond)
+	}
+
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		satisfiedCount := 0
+
+		replicas := server.GetReplicas()
+		for _, slave := range replicas {
+			if slave.LastKnownOffset >= thresholdOffsest {
+				satisfiedCount++
+			}
+		}
+		if satisfiedCount >= thresholdSlaves {
+
+			return satisfiedCount
+		}
+
+		select {
+		case <-timeoutChan:
+			return satisfiedCount
+		case <-ticker.C:
+
+		}
+	}
 }
