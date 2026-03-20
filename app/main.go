@@ -47,6 +47,16 @@ func main() {
 				}
 				i++
 			}
+		case "--dir":
+			if i+1 < len(os.Args) {
+				server.DirPath = os.Args[i+1]
+				i++
+			}
+		case "--dbfilename":
+			if i+1 < len(os.Args) {
+				server.DbFilename = os.Args[i+1]
+				i++
+			}
 		}
 	}
 
@@ -182,6 +192,8 @@ func executeCommand(tokens []string, client *models.Client) string {
 		response = handlePSYNC(client)
 	case "WAIT":
 		response = handleWAIT(tokens)
+	case "CONFIG":
+		response = handleCONFIG(tokens)
 	}
 
 	return response

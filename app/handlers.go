@@ -408,3 +408,20 @@ func handleWAIT(tokens []string) string {
 	return convertToRESPInt(checkReplicationStatus(thresholdSlaves, timeout))
 
 }
+
+func handleCONFIG(tokens []string) string {
+	requiredConfigs := tokens[2:]
+	var responseArray []string
+	for _, key := range requiredConfigs {
+		switch key {
+		case "dir":
+			responseArray = append(responseArray, key)
+			responseArray = append(responseArray, server.DirPath)
+		case "dbfilename":
+			responseArray = append(responseArray, key)
+			responseArray = append(responseArray, server.DbFilename)
+		}
+	}
+
+	return convertToRESPArray(responseArray)
+}

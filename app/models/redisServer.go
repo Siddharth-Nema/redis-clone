@@ -13,6 +13,8 @@ type RedisServer struct {
 	mu               sync.RWMutex // Protects the fields above
 	replicasList     []*Client
 	replicaMtx       sync.RWMutex
+	DirPath          string
+	DbFilename       string
 }
 
 func NewRedisServer() *RedisServer {
