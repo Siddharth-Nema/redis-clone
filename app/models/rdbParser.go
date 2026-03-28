@@ -27,9 +27,9 @@ func NewRDBParser(r io.Reader) *RDBParser {
 }
 
 // Parse runs the main loop to process the RDB file sections
-func (p *RDBParser) Parse() (map[string]string, error) {
+func (p *RDBParser) Parse() (map[string]StringEntry, error) {
 
-	data := make(map[string]string)
+	data := make(map[string]StringEntry)
 
 	// 1. Header Section
 	header := make([]byte, 9)
@@ -89,6 +89,11 @@ func (p *RDBParser) Parse() (map[string]string, error) {
 			valueType, _ := p.r.ReadByte()
 			key, _ := p.ReadString()
 			val, _ := p.ReadString()
+			data[key] = StringEntry{
+				Key:     key,
+				Val:     val,
+				ExpInMs: int64(expireMs),
+			}
 			fmt.Printf("Key-Value (Expire %d ms): %s = %s (Type: %d)\n", expireMs, key, val, valueType)
 
 		case OpcodeExpireS:
@@ -102,6 +107,11 @@ func (p *RDBParser) Parse() (map[string]string, error) {
 			valueType, _ := p.r.ReadByte()
 			key, _ := p.ReadString()
 			val, _ := p.ReadString()
+			data[key] = StringEntry{
+				Key:     key,
+				Val:     val,
+				ExpInMs: int64(expireS) * 1000,
+			}
 			fmt.Printf("Key-Value (Expire %d s): %s = %s (Type: %d)\n", expireS, key, val, valueType)
 
 		case OpcodeEOF:
@@ -123,7 +133,11 @@ func (p *RDBParser) Parse() (map[string]string, error) {
 			if err != nil {
 				return data, err
 			}
-			data[key] = val
+			data[key] = StringEntry{
+				Key:     key,
+				Val:     val,
+				ExpInMs: 0,
+			}
 			fmt.Printf("Key-Value: %s = %s (Type: %d)\n", key, val, valueType)
 		}
 	}

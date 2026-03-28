@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
@@ -223,7 +224,11 @@ func ReadRDBFile() {
 	data, err := reader.Parse()
 
 	for key, value := range data {
-		stringStore.Set(key, value)
+		stringStore.Set(key, value.Val)
+		if value.ExpInMs != 0 {
+			stringStore.SetExpiry(key, time.UnixMilli(int64(value.ExpInMs)))
+		}
+
 		keyStore.SetType(key, "string")
 	}
 }
