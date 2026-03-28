@@ -432,7 +432,16 @@ func handleKEYS(tokens []string) string {
 	}
 
 	searchQuery := tokens[1]
-	data := server.GetKeysFromRDBData(searchQuery)
+	data := keyStore.GetAllKeys()
+	if searchQuery == "*" {
+		return convertToRESPArray(data)
+	}
 
-	return convertToRESPArray(data)
+	filteredData, err := FilterKeys(data, searchQuery)
+	if err != nil {
+		fmt.Println(err)
+		return convertToSimpleError("Error filtering data: " + err.Error())
+	}
+
+	return convertToRESPArray(filteredData)
 }

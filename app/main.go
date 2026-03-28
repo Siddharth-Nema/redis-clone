@@ -2,9 +2,11 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/models"
@@ -59,7 +61,7 @@ func main() {
 			}
 		}
 	}
-	server.ReadRDBFile()
+	ReadRDBFile()
 
 	if server.Role == "slave" {
 		go sendHandshakeToMaster()
@@ -200,4 +202,28 @@ func executeCommand(tokens []string, client *models.Client) string {
 	}
 
 	return response
+}
+
+func ReadRDBFile() {
+	rdbFilePath := filepath.Join(server.DirPath, server.DbFilename)
+
+	file, err := os.Open(rdbFilePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Println("RDB file not found. Starting with an empty database.")
+			return
+		}
+		fmt.Printf("Error opening RDB file: %v\n", err)
+		return
+	}
+	defer file.Close()
+
+	reader := models.NewRDBParser(file)
+
+	data, err := reader.Parse()
+
+	for key, value := range data {
+		stringStore.Set(key, value)
+		keyStore.SetType(key, "string")
+	}
 }

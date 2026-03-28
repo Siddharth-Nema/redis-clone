@@ -36,6 +36,7 @@ func calculateRESPSize(args []string) int {
 }
 
 func FilterKeys(keys []string, pattern string) ([]string, error) {
+	fmt.Println(pattern)
 	re, err := regexp.Compile(pattern)
 	if err != nil {
 		return nil, fmt.Errorf("invalid regex pattern: %w", err)

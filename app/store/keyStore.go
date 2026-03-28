@@ -41,3 +41,14 @@ func (keyStore *KeyStore) Delete(key string) bool {
 	}
 	return exists
 }
+
+func (keyStore *KeyStore) GetAllKeys() []string {
+	keyStore.mtx.Lock()
+	defer keyStore.mtx.Unlock()
+	keys := []string{}
+	for key := range keyStore.keys {
+		keys = append(keys, key)
+	}
+
+	return keys
+}
