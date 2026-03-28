@@ -2,6 +2,8 @@ package main
 
 import (
 	"crypto/rand"
+	"fmt"
+	"regexp"
 	"strconv"
 )
 
@@ -31,4 +33,21 @@ func calculateRESPSize(args []string) int {
 	}
 
 	return size
+}
+
+func FilterKeys(keys []string, pattern string) ([]string, error) {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("invalid regex pattern: %w", err)
+	}
+
+	var filteredKeys []string
+
+	for _, key := range keys {
+		if re.MatchString(key) {
+			filteredKeys = append(filteredKeys, key)
+		}
+	}
+
+	return filteredKeys, nil
 }

@@ -1,6 +1,12 @@
 package models
 
-import "sync"
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+)
 
 type RedisServer struct {
 	Role             string
@@ -15,6 +21,7 @@ type RedisServer struct {
 	replicaMtx       sync.RWMutex
 	DirPath          string
 	DbFilename       string
+	RDBData          map[string]string
 }
 
 func NewRedisServer() *RedisServer {
@@ -23,6 +30,7 @@ func NewRedisServer() *RedisServer {
 		Port:             "6379",
 		masterReplOffset: 0,
 		replicasList:     []*Client{},
+		RDBData:          make(map[string]string),
 	}
 }
 
@@ -58,4 +66,42 @@ func (s *RedisServer) AddReplica(client *Client) {
 	s.replicaMtx.Lock()
 	defer s.replicaMtx.Unlock()
 	s.replicasList = append(s.replicasList, client)
+}
+
+func (s *RedisServer) GetKeysFromRDBData(searchString string) []string {
+	keys := make([]string, len(s.RDBData))
+
+	i := 0
+	for k := range s.RDBData {
+		keys[i] = k
+		i++
+	}
+
+	// Filter keys based on searchString later
+
+	return keys
+}
+
+func (s *RedisServer) ReadRDBFile() {
+	rdbFilePath := filepath.Join(s.DirPath, s.DbFilename)
+
+	file, err := os.Open(rdbFilePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Println("RDB file not found. Starting with an empty database.")
+			// TODO: Initialize empty database
+			return
+		}
+		fmt.Printf("Error opening RDB file: %v\n", err)
+		return
+	}
+	defer file.Close()
+
+	reader := NewRDBParser(file)
+
+	data, err := reader.Parse()
+	if err == nil {
+		s.RDBData = data
+
+	}
 }

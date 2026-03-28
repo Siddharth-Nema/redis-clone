@@ -59,6 +59,7 @@ func main() {
 			}
 		}
 	}
+	server.ReadRDBFile()
 
 	if server.Role == "slave" {
 		go sendHandshakeToMaster()
@@ -194,6 +195,8 @@ func executeCommand(tokens []string, client *models.Client) string {
 		response = handleWAIT(tokens)
 	case "CONFIG":
 		response = handleCONFIG(tokens)
+	case "KEYS":
+		response = handleKEYS(tokens)
 	}
 
 	return response

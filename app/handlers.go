@@ -425,3 +425,14 @@ func handleCONFIG(tokens []string) string {
 
 	return convertToRESPArray(responseArray)
 }
+
+func handleKEYS(tokens []string) string {
+	if len(tokens) < 2 {
+		return convertToSimpleError("Search Query not found")
+	}
+
+	searchQuery := tokens[1]
+	data := server.GetKeysFromRDBData(searchQuery)
+
+	return convertToRESPArray(data)
+}
