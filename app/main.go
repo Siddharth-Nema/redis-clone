@@ -2,15 +2,13 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/app/models"
+	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
 
 var _ = net.Listen
@@ -18,6 +16,13 @@ var _ = os.Exit
 
 // Instance of the current running redis server
 var server *models.RedisServer
+
+var (
+	keyStore    = store.NewKeyStore()
+	stringStore = store.NewStringStore()
+	listStore   = store.NewListStore()
+	streamStore = store.NewStreamStore()
+)
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
@@ -62,7 +67,8 @@ func main() {
 			}
 		}
 	}
-	ReadRDBFile()
+
+	LoadDataFromRDBFile()
 
 	if server.Role == "slave" {
 		go sendHandshakeToMaster()
@@ -132,7 +138,7 @@ func processCommand(tokens []string, client *models.Client) string {
 }
 
 func executeCommand(tokens []string, client *models.Client) string {
-	command := tokens[0]
+	command := strings.ToUpper(tokens[0])
 	var response string
 	switch command {
 	case "PING":
@@ -200,35 +206,9 @@ func executeCommand(tokens []string, client *models.Client) string {
 		response = handleCONFIG(tokens)
 	case "KEYS":
 		response = handleKEYS(tokens)
+	case "SUBSCRIBE":
+		response = handleSUSBCRIBE(tokens)
 	}
 
 	return response
-}
-
-func ReadRDBFile() {
-	rdbFilePath := filepath.Join(server.DirPath, server.DbFilename)
-
-	file, err := os.Open(rdbFilePath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			fmt.Println("RDB file not found. Starting with an empty database.")
-			return
-		}
-		fmt.Printf("Error opening RDB file: %v\n", err)
-		return
-	}
-	defer file.Close()
-
-	reader := models.NewRDBParser(file)
-
-	data, err := reader.Parse()
-
-	for key, value := range data {
-		stringStore.Set(key, value.Val)
-		if value.ExpInMs != 0 {
-			stringStore.SetExpiry(key, time.UnixMilli(int64(value.ExpInMs)))
-		}
-
-		keyStore.SetType(key, "string")
-	}
 }

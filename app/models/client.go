@@ -1,9 +1,11 @@
 package models
 
 import (
+	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var clientSeq uint64 = 0
@@ -41,4 +43,19 @@ func (client *Client) Close() {
 	clientsMu.Lock()
 	delete(ClientList, client.Id)
 	clientsMu.Unlock()
+}
+
+func (c *Client) SendHeartbeat(timeout time.Duration) error {
+	err := c.Conn.SetWriteDeadline(time.Now().Add(timeout))
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Conn.Write([]byte("+PING\r\n"))
+
+	if err != nil {
+		return fmt.Errorf("heartbeat failed: %w", err)
+	}
+
+	return c.Conn.SetWriteDeadline(time.Time{})
 }

@@ -65,6 +65,12 @@ func encodeRESP(v interface{}) string {
 	case string:
 		return convertToRESPString(val)
 
+	case int:
+		return convertToRESPInt(val)
+
+	case int64:
+		return convertToRESPInt(int(val))
+
 	case []string:
 		resp := "*" + strconv.Itoa(len(val)) + CRLF
 		for _, s := range val {
