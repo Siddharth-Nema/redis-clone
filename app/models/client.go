@@ -12,11 +12,19 @@ var clientSeq uint64 = 0
 var clientsMu sync.Mutex
 var ClientList = make(map[uint64]*Client)
 
+type ClientState int
+
+const (
+	StateNormal ClientState = iota
+	StateMulti
+	StateSubscribed
+)
+
 type Client struct {
 	Id                 uint64
 	Conn               net.Conn
 	Queue              [][]string
-	InMulti            bool
+	State              ClientState
 	IsSlave            bool
 	ListeningPort      string
 	LastKnownOffset    int
@@ -29,7 +37,7 @@ func NewClient(conn net.Conn) *Client {
 		Id:              id,
 		Conn:            conn,
 		Queue:           [][]string{},
-		InMulti:         false,
+		State:           StateNormal,
 		IsSlave:         false,
 		LastKnownOffset: 0,
 	}

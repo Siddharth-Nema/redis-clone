@@ -305,7 +305,7 @@ func handleINCR(tokens []string) string {
 }
 
 func handleMULTI(client *models.Client) string {
-	client.InMulti = true
+	client.State = models.StateMulti
 	return convertToSimpleString("OK")
 }
 
@@ -319,14 +319,14 @@ func handleEXEC(client *models.Client) string {
 	for _, query := range client.Queue {
 		response = append(response, executeCommand(query, client))
 	}
-	client.InMulti = false
+	client.State = models.StateNormal
 	client.Queue = [][]string{}
 
 	return convertToRESPArrayFromBulkStrings(response)
 }
 
 func handleDISCARD(client *models.Client) string {
-	client.InMulti = false
+	client.State = models.StateNormal
 	client.Queue = [][]string{}
 
 	return convertToSimpleString("OK")
@@ -456,6 +456,8 @@ func handleSUSBCRIBE(tokens []string, client *models.Client) string {
 	client.AddChannelKeyToSubscribedList(channelName)
 	channel := channelStore.Get(channelName)
 	channel.AddClientAsSubscriber(client)
+
+	client.State = models.StateSubscribed
 
 	return encodeRESP([]interface{}{"subscribe", channelName, len(client.SubscribedChannels)})
 }

@@ -117,25 +117,42 @@ func handleConnection(client *models.Client) {
 
 func processCommand(tokens []string, client *models.Client) string {
 	command := tokens[0]
+
+	if client.State == models.StateSubscribed {
+		return handleSubscribeMode(tokens, client)
+	}
+
 	switch command {
 	case "EXEC":
-		if !client.InMulti {
+		if client.State != models.StateMulti {
 			return convertToSimpleError("EXEC without MULTI")
 		}
 		return handleEXEC(client)
 	case "DISCARD":
-		if !client.InMulti {
+		if client.State != models.StateMulti {
 			return convertToSimpleError("DISCARD without MULTI")
 		}
 		return handleDISCARD(client)
 	case "MULTI":
 		return handleMULTI(client)
 	default:
-		if client.InMulti {
+		if client.State == models.StateMulti {
 			return queueCommands(tokens, client)
 		}
 		return executeCommand(tokens, client)
 	}
+}
+
+func handleSubscribeMode(tokens []string, client *models.Client) string {
+	command := tokens[0]
+
+	switch command {
+	case "SUBSCRIBE", "UNSUBSCRIBE", "PSUBSCRIBE", "PUNSUBSCRIBE", "PING", "QUIT":
+		return executeCommand(tokens, client)
+	default:
+		return convertToSimpleError("Can't execute '" + command + "': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context")
+	}
+
 }
 
 func executeCommand(tokens []string, client *models.Client) string {
