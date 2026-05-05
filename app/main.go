@@ -145,14 +145,18 @@ func processCommand(tokens []string, client *models.Client) string {
 
 func handleSubscribeMode(tokens []string, client *models.Client) string {
 	command := tokens[0]
+	var response string
 
 	switch command {
-	case "SUBSCRIBE", "UNSUBSCRIBE", "PSUBSCRIBE", "PUNSUBSCRIBE", "PING", "QUIT":
-		return executeCommand(tokens, client)
+	case "PING":
+		response = convertToRESPArray([]string{"pong", ""})
+	case "SUBSCRIBE", "UNSUBSCRIBE", "PSUBSCRIBE", "PUNSUBSCRIBE", "QUIT":
+		response = executeCommand(tokens, client)
 	default:
-		return convertToSimpleError("Can't execute '" + command + "': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context")
+		response = convertToSimpleError("Can't execute '" + command + "': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context")
 	}
 
+	return response
 }
 
 func executeCommand(tokens []string, client *models.Client) string {
