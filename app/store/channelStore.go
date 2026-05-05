@@ -25,6 +25,7 @@ func (store *ChannelStore) Get(key string) *models.Channel {
 		return channel
 	} else {
 		store.channels[key] = &models.Channel{
+			Name:        key,
 			Publishers:  []*models.Client{},
 			Subscribers: []*models.Client{},
 		}

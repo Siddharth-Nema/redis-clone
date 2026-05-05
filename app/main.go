@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/codecrafters-io/redis-starter-go/app/io"
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
@@ -98,7 +99,7 @@ func handleConnection(client *models.Client) {
 	reader := bufio.NewReader(client.Conn)
 
 	for {
-		tokens, _, err := parseRESP(reader)
+		tokens, _, err := io.ParseRESP(reader)
 		if err != nil {
 			fmt.Println("Client disconnected:", err)
 			return
@@ -108,9 +109,7 @@ func handleConnection(client *models.Client) {
 
 		if len(tokens) > 0 {
 			response := processCommand(tokens, client)
-			if len(response) > 0 {
-				client.Conn.Write([]byte(response))
-			}
+			client.Send(response)
 		}
 	}
 }
@@ -125,12 +124,12 @@ func processCommand(tokens []string, client *models.Client) string {
 	switch command {
 	case "EXEC":
 		if client.State != models.StateMulti {
-			return convertToSimpleError("EXEC without MULTI")
+			return io.ConvertToSimpleError("EXEC without MULTI")
 		}
 		return handleEXEC(client)
 	case "DISCARD":
 		if client.State != models.StateMulti {
-			return convertToSimpleError("DISCARD without MULTI")
+			return io.ConvertToSimpleError("DISCARD without MULTI")
 		}
 		return handleDISCARD(client)
 	case "MULTI":
@@ -149,11 +148,11 @@ func handleSubscribeMode(tokens []string, client *models.Client) string {
 
 	switch command {
 	case "PING":
-		response = convertToRESPArray([]string{"pong", ""})
+		response = io.ConvertToRESPArray([]string{"pong", ""})
 	case "SUBSCRIBE", "UNSUBSCRIBE", "PSUBSCRIBE", "PUNSUBSCRIBE", "QUIT":
 		response = executeCommand(tokens, client)
 	default:
-		response = convertToSimpleError("Can't execute '" + command + "': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context")
+		response = io.ConvertToSimpleError("Can't execute '" + command + "': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context")
 	}
 
 	return response
@@ -169,24 +168,24 @@ func executeCommand(tokens []string, client *models.Client) string {
 	case "ECHO":
 		if len(tokens) > 1 {
 			arg := tokens[1]
-			response = convertToRESPString(arg)
+			response = io.ConvertToRESPString(arg)
 		}
 
 	case "SET":
 		response = handleSet(tokens)
-		if response != ERR && server.IsMaster() {
+		if response != io.ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "GET":
 		response = handleGet(tokens)
 	case "RPUSH":
 		response = handleRPUSH(tokens)
-		if response != ERR && server.IsMaster() {
+		if response != io.ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "LPUSH":
 		response = handleLPUSH(tokens)
-		if response != ERR && server.IsMaster() {
+		if response != io.ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "LRANGE":
@@ -197,14 +196,14 @@ func executeCommand(tokens []string, client *models.Client) string {
 		response = handleLPOP(tokens)
 	case "BLPOP":
 		response = handleBLPOP(tokens)
-		if response != ERR && server.IsMaster() {
+		if response != io.ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "TYPE":
 		response = handleTYPE(tokens)
 	case "XADD":
 		response = handleXADD(tokens)
-		if response != ERR && server.IsMaster() {
+		if response != io.ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "XRANGE":
@@ -213,7 +212,7 @@ func executeCommand(tokens []string, client *models.Client) string {
 		response = handleXREAD(tokens)
 	case "INCR":
 		response = handleINCR(tokens)
-		if response != ERR && server.IsMaster() {
+		if response != io.ERR && server.IsMaster() {
 			go propogateCommandToReplicas(tokens)
 		}
 	case "INFO":

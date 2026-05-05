@@ -1,4 +1,4 @@
-package main
+package io
 
 import (
 	"bufio"
@@ -12,11 +12,11 @@ var ERR = "$-1\r\n"
 var CRLF = "\r\n"
 var NULL_ARRAY = "*-1\r\n"
 
-func convertToSimpleString(arg string) string {
+func ConvertToSimpleString(arg string) string {
 	return "+" + arg + "\r\n"
 }
 
-func convertToRESPString(arg string) string {
+func ConvertToRESPString(arg string) string {
 	var response = "$"
 	response += strconv.Itoa(len(arg)) + CRLF
 	response += arg + CRLF
@@ -24,14 +24,14 @@ func convertToRESPString(arg string) string {
 	return response
 }
 
-func convertToRESPInt(arg int) string {
+func ConvertToRESPInt(arg int) string {
 	var response = ":"
 	response += strconv.Itoa(arg) + CRLF
 
 	return response
 }
 
-func convertToRESPArray(args []string) string {
+func ConvertToRESPArray(args []string) string {
 	var response = "*" + strconv.Itoa(len(args)) + CRLF
 	for _, arg := range args {
 		response += "$" + strconv.Itoa(len(arg)) + CRLF + arg + CRLF
@@ -40,7 +40,7 @@ func convertToRESPArray(args []string) string {
 	return response
 }
 
-func convertToRESPMultiArray(items [][]interface{}) string {
+func ConvertToRESPMultiArray(items [][]interface{}) string {
 	var response = "*" + strconv.Itoa(len(items)) + CRLF
 
 	for _, item := range items {
@@ -59,36 +59,36 @@ func convertToRESPMultiArray(items [][]interface{}) string {
 	return response
 }
 
-func encodeRESP(v interface{}) string {
+func EncodeRESP(v interface{}) string {
 	switch val := v.(type) {
 
 	case string:
-		return convertToRESPString(val)
+		return ConvertToRESPString(val)
 
 	case int:
-		return convertToRESPInt(val)
+		return ConvertToRESPInt(val)
 
 	case int64:
-		return convertToRESPInt(int(val))
+		return ConvertToRESPInt(int(val))
 
 	case []string:
 		resp := "*" + strconv.Itoa(len(val)) + CRLF
 		for _, s := range val {
-			resp += convertToRESPString(s)
+			resp += ConvertToRESPString(s)
 		}
 		return resp
 
 	case []interface{}:
 		resp := "*" + strconv.Itoa(len(val)) + CRLF
 		for _, item := range val {
-			resp += encodeRESP(item)
+			resp += EncodeRESP(item)
 		}
 		return resp
 
 	case [][]interface{}:
 		resp := "*" + strconv.Itoa(len(val)) + CRLF
 		for _, item := range val {
-			resp += encodeRESP(item)
+			resp += EncodeRESP(item)
 		}
 		return resp
 
@@ -97,12 +97,12 @@ func encodeRESP(v interface{}) string {
 	}
 }
 
-func convertToSimpleError(args string) string {
+func ConvertToSimpleError(args string) string {
 	return "-ERR " + args + "\r\n"
 }
 
-// parseRESP reads and parses a complete RESP array command
-func parseRESP(reader *bufio.Reader) ([]string, int, error) {
+// ParseRESP reads and parses a complete RESP array command
+func ParseRESP(reader *bufio.Reader) ([]string, int, error) {
 
 	var bytesRead int
 
@@ -183,7 +183,7 @@ func parseRESP(reader *bufio.Reader) ([]string, int, error) {
 	return result, bytesRead, nil
 }
 
-func convertToRESPArrayFromBulkStrings(items []string) string {
+func ConvertToRESPArrayFromBulkStrings(items []string) string {
 	var response = "*" + strconv.Itoa(len(items)) + CRLF
 
 	for _, item := range items {
@@ -193,6 +193,6 @@ func convertToRESPArrayFromBulkStrings(items []string) string {
 	return response
 }
 
-func convertToRDBFile(file string) string {
+func ConvertToRDBFile(file string) string {
 	return "$" + strconv.Itoa(len(file)) + "\r\n" + file
 }

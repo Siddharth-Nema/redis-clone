@@ -3,12 +3,13 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io"
+	stdio "io"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/codecrafters-io/redis-starter-go/app/io"
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
 
@@ -70,19 +71,19 @@ func sendHandshakeToMaster() error {
 		return err
 	}
 
-	replConfPort := convertToRESPArray([]string{"REPLCONF", "listening-port", server.Port})
+	replConfPort := io.ConvertToRESPArray([]string{"REPLCONF", "listening-port", server.Port})
 	_, err = sendCommand(conn, replConfPort)
 	if err != nil {
 		return err
 	}
 
-	replConfCapabilities := convertToRESPArray([]string{"REPLCONF", "capa", "psync2"})
+	replConfCapabilities := io.ConvertToRESPArray([]string{"REPLCONF", "capa", "psync2"})
 	_, err = sendCommand(conn, replConfCapabilities)
 	if err != nil {
 		return err
 	}
 
-	psyncCommand := convertToRESPArray([]string{"PSYNC", "?", "-1"})
+	psyncCommand := io.ConvertToRESPArray([]string{"PSYNC", "?", "-1"})
 	err = propogateCommand(conn, psyncCommand)
 	if err != nil {
 		return err
@@ -93,7 +94,7 @@ func sendHandshakeToMaster() error {
 }
 
 func propogateCommandToReplicas(tokens []string) {
-	command := convertToRESPArray(tokens)
+	command := io.ConvertToRESPArray(tokens)
 	server.AddToOffset(calculateRESPSize(tokens))
 	for _, slave := range server.GetReplicas() {
 		propogateCommand(slave.Conn, command)
@@ -138,7 +139,7 @@ func readReplicationStream(conn net.Conn) {
 
 	if rdbLen > 0 {
 		rdb := make([]byte, rdbLen)
-		if _, err := io.ReadFull(reader, rdb); err != nil {
+		if _, err := stdio.ReadFull(reader, rdb); err != nil {
 			fmt.Println("replication read RDB payload error:", err)
 			return
 		}
@@ -147,7 +148,7 @@ func readReplicationStream(conn net.Conn) {
 
 	dummyClient := &models.Client{}
 	for {
-		tokens, bytesRead, err := parseRESP(reader)
+		tokens, bytesRead, err := io.ParseRESP(reader)
 		if err != nil {
 			fmt.Println("replication stream ended:", err)
 			return

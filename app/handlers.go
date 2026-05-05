@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/codecrafters-io/redis-starter-go/app/io"
 	"github.com/codecrafters-io/redis-starter-go/app/models"
 )
 
 func handleSet(tokens []string) string {
 	if len(tokens) < 2 {
-		return ERR
+		return io.ERR
 
 	}
 	stringStore.Set(tokens[1], tokens[2])
@@ -27,7 +28,7 @@ func handleSet(tokens []string) string {
 			if i+1 < len(tokens) {
 				durationInSec, err := strconv.Atoi(tokens[i+1])
 				if err != nil {
-					return ERR
+					return io.ERR
 				}
 
 				exp := time.Now().Add(time.Second * time.Duration(durationInSec))
@@ -37,7 +38,7 @@ func handleSet(tokens []string) string {
 			if i+1 < len(tokens) {
 				durationInMilliSec, err := strconv.Atoi(tokens[i+1])
 				if err != nil {
-					return ERR
+					return io.ERR
 				}
 
 				exp := time.Now().Add(time.Millisecond * time.Duration(durationInMilliSec))
@@ -45,13 +46,13 @@ func handleSet(tokens []string) string {
 			}
 		}
 	}
-	return OK
+	return io.OK
 }
 
 func handleGet(tokens []string) string {
 	var response string
 	if len(tokens) < 2 {
-		return ERR
+		return io.ERR
 	}
 	val, exists := stringStore.Get(tokens[1])
 	exp := stringStore.GetExpiry(tokens[1])
@@ -62,9 +63,9 @@ func handleGet(tokens []string) string {
 		isExpired = time.Now().After(exp)
 	}
 	if exists && !isExpired {
-		response = convertToRESPString(val)
+		response = io.ConvertToRESPString(val)
 	} else {
-		response = ERR
+		response = io.ERR
 		if isExpired {
 			stringStore.Delete(tokens[1])
 		}
@@ -75,7 +76,7 @@ func handleGet(tokens []string) string {
 
 func handleRPUSH(tokens []string) string {
 	if len(tokens) < 3 {
-		return ERR
+		return io.ERR
 	}
 
 	key := tokens[1]
@@ -84,12 +85,12 @@ func handleRPUSH(tokens []string) string {
 	count := listStore.PushToList(key, val)
 	keyStore.SetType(key, "list")
 
-	return convertToRESPInt(count)
+	return io.ConvertToRESPInt(count)
 }
 
 func handleLPUSH(tokens []string) string {
 	if len(tokens) < 3 {
-		return ERR
+		return io.ERR
 	}
 
 	key := tokens[1]
@@ -98,40 +99,40 @@ func handleLPUSH(tokens []string) string {
 	count := listStore.PrependToList(key, val)
 	keyStore.SetType(key, "list")
 
-	return convertToRESPInt(count)
+	return io.ConvertToRESPInt(count)
 }
 
 func handleLRANGE(tokens []string) string {
 	if len(tokens) < 4 {
-		return ERR
+		return io.ERR
 	}
 
 	start, err := strconv.Atoi(tokens[2])
 	if err != nil {
-		return ERR
+		return io.ERR
 	}
 	end, err := strconv.Atoi(tokens[3])
 	if err != nil {
-		return ERR
+		return io.ERR
 	}
 
 	reqList := listStore.GetItemsFromList(tokens[1], start, end)
-	return convertToRESPArray(reqList)
+	return io.ConvertToRESPArray(reqList)
 }
 
 func handleLLEN(tokens []string) string {
 	if len(tokens) < 2 {
-		return ERR
+		return io.ERR
 	}
 
 	size := listStore.GetLength(tokens[1])
 
-	return convertToRESPInt(size)
+	return io.ConvertToRESPInt(size)
 }
 
 func handleLPOP(tokens []string) string {
 	if len(tokens) < 2 {
-		return ERR
+		return io.ERR
 	}
 
 	var count = 1
@@ -147,18 +148,18 @@ func handleLPOP(tokens []string) string {
 
 	if ok {
 		if count == 1 {
-			return convertToRESPString(val[0])
+			return io.ConvertToRESPString(val[0])
 		} else {
-			return convertToRESPArray(val)
+			return io.ConvertToRESPArray(val)
 		}
 	} else {
-		return ERR
+		return io.ERR
 	}
 }
 
 func handleBLPOP(tokens []string) string {
 	if len(tokens) < 2 {
-		return ERR
+		return io.ERR
 	}
 
 	timeout := 0.0
@@ -174,25 +175,25 @@ func handleBLPOP(tokens []string) string {
 	res[0] = tokens[1]
 	res[1] = val
 	if ok {
-		return convertToRESPArray(res)
+		return io.ConvertToRESPArray(res)
 	} else {
-		return NULL_ARRAY
+		return io.NULL_ARRAY
 	}
 }
 
 func handleTYPE(tokens []string) string {
 	if len(tokens) < 2 {
-		return ERR
+		return io.ERR
 	}
 
 	val := keyStore.GetType(tokens[1])
 
-	return convertToSimpleString(val)
+	return io.ConvertToSimpleString(val)
 }
 
 func handleXADD(tokens []string) string {
 	if len(tokens) < 3 {
-		return ERR
+		return io.ERR
 	}
 
 	key := tokens[1]
@@ -201,38 +202,38 @@ func handleXADD(tokens []string) string {
 
 	res, err := streamStore.AddToStream(key, entryID, values)
 	if err != nil {
-		return convertToSimpleError(err.Error())
+		return io.ConvertToSimpleError(err.Error())
 	}
 	keyStore.SetType(key, "stream")
 
-	return convertToRESPString(res)
+	return io.ConvertToRESPString(res)
 }
 
 func handleXRANGE(tokens []string) string {
 	if len(tokens) < 4 {
-		return ERR
+		return io.ERR
 	}
 
 	key := tokens[1]
 	startingEntryID, err := models.ParseStreamIDFromString(tokens[2])
 	if err != nil {
-		return ERR
+		return io.ERR
 	}
 
 	endingEntryID, err := models.ParseStreamIDFromString(tokens[3])
 	if err != nil {
-		return ERR
+		return io.ERR
 	}
 
 	entries := streamStore.GetStreamEntries(key, startingEntryID, endingEntryID)
 	res := models.StreamEntriesToReply(entries)
 
-	return convertToRESPMultiArray(res)
+	return io.ConvertToRESPMultiArray(res)
 }
 
 func handleXREAD(tokens []string) string {
 	if len(tokens) < 4 {
-		return ERR
+		return io.ERR
 	}
 
 	var rawStreamData []string
@@ -243,7 +244,7 @@ func handleXREAD(tokens []string) string {
 		if strings.ToLower(tokens[i]) == "block" {
 			parsedTime, err := strconv.Atoi(tokens[i+1])
 			if err != nil {
-				return ERR
+				return io.ERR
 			}
 			timeout = parsedTime
 			i++
@@ -256,7 +257,7 @@ func handleXREAD(tokens []string) string {
 	}
 
 	if len(rawStreamData) == 0 || len(rawStreamData)%2 != 0 {
-		return ERR
+		return io.ERR
 	}
 
 	numOfStreams := len(rawStreamData) / 2
@@ -269,7 +270,7 @@ func handleXREAD(tokens []string) string {
 		} else {
 			startEntryID, err = models.ParseStreamIDFromString(rawStreamData[numOfStreams+i])
 			if err != nil {
-				return ERR
+				return io.ERR
 			}
 		}
 
@@ -282,15 +283,15 @@ func handleXREAD(tokens []string) string {
 
 	data := streamStore.ReadStreams(streamsToRead, timeout)
 	if len(data) == 0 {
-		return NULL_ARRAY
+		return io.NULL_ARRAY
 	} else {
-		return encodeRESP(models.StreamOutputToReply(data))
+		return io.EncodeRESP(models.StreamOutputToReply(data))
 	}
 }
 
 func handleINCR(tokens []string) string {
 	if len(tokens) < 2 {
-		return ERR
+		return io.ERR
 	}
 
 	key := tokens[1]
@@ -298,20 +299,20 @@ func handleINCR(tokens []string) string {
 	val, ok := stringStore.Increment(key)
 
 	if ok {
-		return convertToRESPInt(val)
+		return io.ConvertToRESPInt(val)
 	} else {
-		return convertToSimpleError("value is not an integer or out of range")
+		return io.ConvertToSimpleError("value is not an integer or out of range")
 	}
 }
 
 func handleMULTI(client *models.Client) string {
 	client.State = models.StateMulti
-	return convertToSimpleString("OK")
+	return io.ConvertToSimpleString("OK")
 }
 
 func queueCommands(tokens []string, client *models.Client) string {
 	client.Queue = append(client.Queue, tokens)
-	return convertToSimpleString("QUEUED")
+	return io.ConvertToSimpleString("QUEUED")
 }
 
 func handleEXEC(client *models.Client) string {
@@ -322,14 +323,14 @@ func handleEXEC(client *models.Client) string {
 	client.State = models.StateNormal
 	client.Queue = [][]string{}
 
-	return convertToRESPArrayFromBulkStrings(response)
+	return io.ConvertToRESPArrayFromBulkStrings(response)
 }
 
 func handleDISCARD(client *models.Client) string {
 	client.State = models.StateNormal
 	client.Queue = [][]string{}
 
-	return convertToSimpleString("OK")
+	return io.ConvertToSimpleString("OK")
 }
 
 func handleINFO() string {
@@ -338,20 +339,20 @@ func handleINFO() string {
 
 	b.WriteString("role:")
 	b.WriteString(server.Role)
-	b.WriteString(CRLF)
+	b.WriteString(io.CRLF)
 
 	b.WriteString("master_replid:")
 	b.WriteString(server.MasterReplID)
-	b.WriteString(CRLF)
+	b.WriteString(io.CRLF)
 
 	b.WriteString("master_repl_offset:")
 	b.WriteString(strconv.FormatInt(int64(server.GetOffset()), 10))
 
-	return convertToRESPString(b.String())
+	return io.ConvertToRESPString(b.String())
 }
 
 func handleREPLCONF(tokens []string, client *models.Client) string {
-	response := OK
+	response := io.OK
 	for i := 0; i < len(tokens); i++ {
 		switch tokens[i] {
 		case "listening-port":
@@ -360,7 +361,7 @@ func handleREPLCONF(tokens []string, client *models.Client) string {
 				i++
 			}
 		case "GETACK":
-			response = convertToRESPArray([]string{"REPLCONF", "ACK", strconv.Itoa(server.GetOffset())})
+			response = io.ConvertToRESPArray([]string{"REPLCONF", "ACK", strconv.Itoa(server.GetOffset())})
 		case "ACK":
 			if i+1 < len(tokens) {
 				offset, err := strconv.Atoi(tokens[i+1])
@@ -382,9 +383,9 @@ func handlePSYNC(client *models.Client) string {
 
 	rdbHex := emptyRDB
 	rdbData, _ := hex.DecodeString(rdbHex)
-	rdbResp := convertToRDBFile(string(rdbData))
+	rdbResp := io.ConvertToRDBFile(string(rdbData))
 
-	fullSyncResp := convertToSimpleString(fmt.Sprintf("FULLRESYNC %s 0", server.MasterReplID))
+	fullSyncResp := io.ConvertToSimpleString(fmt.Sprintf("FULLRESYNC %s 0", server.MasterReplID))
 	return fullSyncResp + rdbResp
 }
 
@@ -405,7 +406,7 @@ func handleWAIT(tokens []string) string {
 			timeout = parsedTimeout
 		}
 	}
-	return convertToRESPInt(checkReplicationStatus(thresholdSlaves, timeout))
+	return io.ConvertToRESPInt(checkReplicationStatus(thresholdSlaves, timeout))
 
 }
 
@@ -423,32 +424,32 @@ func handleCONFIG(tokens []string) string {
 		}
 	}
 
-	return convertToRESPArray(responseArray)
+	return io.ConvertToRESPArray(responseArray)
 }
 
 func handleKEYS(tokens []string) string {
 	if len(tokens) < 2 {
-		return convertToSimpleError("Search Query not found")
+		return io.ConvertToSimpleError("Search Query not found")
 	}
 
 	searchQuery := tokens[1]
 	data := keyStore.GetAllKeys()
 	if searchQuery == "*" {
-		return convertToRESPArray(data)
+		return io.ConvertToRESPArray(data)
 	}
 
 	filteredData, err := FilterKeys(data, searchQuery)
 	if err != nil {
 		fmt.Println(err)
-		return convertToSimpleError("Error filtering data: " + err.Error())
+		return io.ConvertToSimpleError("Error filtering data: " + err.Error())
 	}
 
-	return convertToRESPArray(filteredData)
+	return io.ConvertToRESPArray(filteredData)
 }
 
 func handleSUSBCRIBE(tokens []string, client *models.Client) string {
 	if len(tokens) < 2 {
-		return convertToSimpleError("Channel name not provided")
+		return io.ConvertToSimpleError("Channel name not provided")
 	}
 
 	channelName := tokens[1]
@@ -459,16 +460,18 @@ func handleSUSBCRIBE(tokens []string, client *models.Client) string {
 
 	client.State = models.StateSubscribed
 
-	return encodeRESP([]interface{}{"subscribe", channelName, len(client.SubscribedChannels)})
+	return io.EncodeRESP([]interface{}{"subscribe", channelName, len(client.SubscribedChannels)})
 }
 
 func handlePUBLISH(tokens []string) string {
 	if len(tokens) < 3 {
-		return convertToSimpleError("Command incomplete")
+		return io.ConvertToSimpleError("Command incomplete")
 	}
 
 	channel := channelStore.Get(tokens[1])
-	//msg := tokens[2]
+	msg := tokens[2]
 
-	return convertToRESPInt(len(channel.Subscribers))
+	channel.Publish(msg)
+
+	return io.ConvertToRESPInt(len(channel.Subscribers))
 }

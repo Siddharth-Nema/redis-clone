@@ -78,3 +78,9 @@ func (c *Client) AddChannelKeyToSubscribedList(key string) {
 
 	c.SubscribedChannels = append(c.SubscribedChannels, key)
 }
+
+func (c *Client) Send(msg string) {
+	if len(msg) > 0 {
+		c.Conn.Write([]byte(msg))
+	}
+}
