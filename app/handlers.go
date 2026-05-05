@@ -461,3 +461,14 @@ func handleSUSBCRIBE(tokens []string, client *models.Client) string {
 
 	return encodeRESP([]interface{}{"subscribe", channelName, len(client.SubscribedChannels)})
 }
+
+func handlePUBLISH(tokens []string) string {
+	if len(tokens) < 3 {
+		return convertToSimpleError("Command incomplete")
+	}
+
+	channel := channelStore.Get(tokens[1])
+	//msg := tokens[2]
+
+	return convertToRESPInt(len(channel.Subscribers))
+}

@@ -230,6 +230,8 @@ func executeCommand(tokens []string, client *models.Client) string {
 		response = handleKEYS(tokens)
 	case "SUBSCRIBE":
 		response = handleSUSBCRIBE(tokens, client)
+	case "PUBLISH":
+		response = handlePUBLISH(tokens)
 	}
 
 	return response

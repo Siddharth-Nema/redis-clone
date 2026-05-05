@@ -5,8 +5,8 @@ import (
 )
 
 type Channel struct {
-	publishers  []*Client
-	subscribers []*Client
+	Publishers  []*Client
+	Subscribers []*Client
 	mtx         sync.Mutex
 }
 
@@ -23,5 +23,5 @@ func (channel *Channel) AddClientAsSubscriber(client *Client) {
 	channel.mtx.Lock()
 	defer channel.mtx.Unlock()
 
-	channel.subscribers = append(channel.subscribers, client)
+	channel.Subscribers = append(channel.Subscribers, client)
 }

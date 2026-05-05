@@ -20,10 +20,14 @@ func NewChannelStore() *ChannelStore {
 func (store *ChannelStore) Get(key string) *models.Channel {
 	store.mtx.RLock()
 	defer store.mtx.RUnlock()
-
-	if channel, exists := store.channels[key]; exists {
+	channel, exists := store.channels[key]
+	if exists {
 		return channel
 	} else {
-		return &models.Channel{}
+		store.channels[key] = &models.Channel{
+			Publishers:  []*models.Client{},
+			Subscribers: []*models.Client{},
+		}
+		return store.channels[key]
 	}
 }
