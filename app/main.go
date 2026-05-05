@@ -18,10 +18,11 @@ var _ = os.Exit
 var server *models.RedisServer
 
 var (
-	keyStore    = store.NewKeyStore()
-	stringStore = store.NewStringStore()
-	listStore   = store.NewListStore()
-	streamStore = store.NewStreamStore()
+	keyStore     = store.NewKeyStore()
+	stringStore  = store.NewStringStore()
+	listStore    = store.NewListStore()
+	streamStore  = store.NewStreamStore()
+	channelStore = store.NewChannelStore()
 )
 
 func main() {
@@ -207,7 +208,7 @@ func executeCommand(tokens []string, client *models.Client) string {
 	case "KEYS":
 		response = handleKEYS(tokens)
 	case "SUBSCRIBE":
-		response = handleSUSBCRIBE(tokens)
+		response = handleSUSBCRIBE(tokens, client)
 	}
 
 	return response

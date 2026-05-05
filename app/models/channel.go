@@ -1,18 +1,12 @@
 package models
 
-import "sync"
-
-type Publisher struct {
-	client Client
-}
-
-type Subscriber struct {
-	client Client
-}
+import (
+	"sync"
+)
 
 type Channel struct {
-	publishers  []Client
-	subscribers []Client
+	publishers  []*Client
+	subscribers []*Client
 	mtx         sync.Mutex
 }
 
@@ -25,9 +19,9 @@ func (channel *Channel) Publish(msg string) {
 	// }
 }
 
-func (channel *Channel) AddToSubscribers(newClient *Client) {
+func (channel *Channel) AddClientAsSubscriber(client *Client) {
 	channel.mtx.Lock()
 	defer channel.mtx.Unlock()
 
-	channel.subscribers = append(channel.subscribers, *newClient)
+	channel.subscribers = append(channel.subscribers, client)
 }

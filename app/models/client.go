@@ -13,13 +13,14 @@ var clientsMu sync.Mutex
 var ClientList = make(map[uint64]*Client)
 
 type Client struct {
-	Id              uint64
-	Conn            net.Conn
-	Queue           [][]string
-	InMulti         bool
-	IsSlave         bool
-	ListeningPort   string
-	LastKnownOffset int
+	Id                 uint64
+	Conn               net.Conn
+	Queue              [][]string
+	InMulti            bool
+	IsSlave            bool
+	ListeningPort      string
+	LastKnownOffset    int
+	SubscribedChannels []string
 }
 
 func NewClient(conn net.Conn) *Client {
@@ -58,4 +59,14 @@ func (c *Client) SendHeartbeat(timeout time.Duration) error {
 	}
 
 	return c.Conn.SetWriteDeadline(time.Time{})
+}
+
+func (c *Client) AddChannelKeyToSubscribedList(key string) {
+	for _, channel := range c.SubscribedChannels {
+		if key == channel {
+			return
+		}
+	}
+
+	c.SubscribedChannels = append(c.SubscribedChannels, key)
 }

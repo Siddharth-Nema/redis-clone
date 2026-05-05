@@ -446,12 +446,16 @@ func handleKEYS(tokens []string) string {
 	return convertToRESPArray(filteredData)
 }
 
-func handleSUSBCRIBE(tokens []string) string {
+func handleSUSBCRIBE(tokens []string, client *models.Client) string {
 	if len(tokens) < 2 {
 		return convertToSimpleError("Channel name not provided")
 	}
 
 	channelName := tokens[1]
 
-	return encodeRESP([]interface{}{"subscribe", channelName, 1})
+	client.AddChannelKeyToSubscribedList(channelName)
+	channel := channelStore.Get(channelName)
+	channel.AddClientAsSubscriber(client)
+
+	return encodeRESP([]interface{}{"subscribe", channelName, len(client.SubscribedChannels)})
 }
