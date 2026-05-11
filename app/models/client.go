@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"net"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -77,6 +78,15 @@ func (c *Client) AddChannelKeyToSubscribedList(key string) {
 	}
 
 	c.SubscribedChannels = append(c.SubscribedChannels, key)
+}
+
+func (c *Client) RemoveChannelKeyFromSubscribedList(key string) {
+	for idx, channel := range c.SubscribedChannels {
+		if key == channel {
+			c.SubscribedChannels = slices.Delete(c.SubscribedChannels, idx, idx+1)
+			break
+		}
+	}
 }
 
 func (c *Client) Send(msg string) {

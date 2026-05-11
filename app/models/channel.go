@@ -1,6 +1,7 @@
 package models
 
 import (
+	"slices"
 	"sync"
 
 	"github.com/codecrafters-io/redis-starter-go/app/io"
@@ -27,4 +28,18 @@ func (channel *Channel) AddClientAsSubscriber(client *Client) {
 	defer channel.mtx.Unlock()
 
 	channel.Subscribers = append(channel.Subscribers, client)
+}
+
+func (channel *Channel) RemoveClientFromSubscribers(client *Client) {
+	channel.mtx.Lock()
+	defer channel.mtx.Unlock()
+
+	var reqIdx int
+	for idx, sub := range channel.Subscribers {
+		if client.Id == sub.Id {
+			reqIdx = idx
+		}
+	}
+
+	channel.Subscribers = slices.Delete(channel.Subscribers, reqIdx, reqIdx+1)
 }

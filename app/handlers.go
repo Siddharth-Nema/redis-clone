@@ -475,3 +475,16 @@ func handlePUBLISH(tokens []string) string {
 
 	return io.ConvertToRESPInt(len(channel.Subscribers))
 }
+
+func handleUNSUBSCRIBE(tokens []string, client *models.Client) string {
+	if len(tokens) < 2 {
+		return io.ConvertToSimpleError("Channel Name not provided")
+	}
+
+	channel := channelStore.Get(tokens[1])
+
+	channel.RemoveClientFromSubscribers(client)
+	client.RemoveChannelKeyFromSubscribedList(tokens[1])
+
+	return io.EncodeRESP([]interface{}{"unsubscribe", tokens[1], len(client.SubscribedChannels)})
+}

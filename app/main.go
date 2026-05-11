@@ -231,6 +231,8 @@ func executeCommand(tokens []string, client *models.Client) string {
 		response = handleSUSBCRIBE(tokens, client)
 	case "PUBLISH":
 		response = handlePUBLISH(tokens)
+	case "UNSUBSCRIBE":
+		response = handleUNSUBSCRIBE(tokens, client)
 	}
 
 	return response
